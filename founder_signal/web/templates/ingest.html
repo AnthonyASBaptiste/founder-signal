@@ -1,27 +1,41 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h2 style="margin-top:0">Ingest source material</h2>
-  <p style="color:var(--color-text-secondary); font-size:0.95rem; line-height:1.5; margin-bottom:1.25rem">Drop in email text or a voice-note/meeting transcript. The Founder Signal skill extracts commitments, reconciles against the ledger, and adds them for your review.</p>
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem">
+    <div style="display:flex; align-items:center; gap:0.75rem">
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back</a>
+      <h2 style="margin:0; font-size:1.35rem">Ingest Source Material</h2>
+    </div>
+  </div>
 
-  <div class="card">
+  <p style="color:var(--color-text-secondary); font-size:0.95rem; line-height:1.5; margin-bottom:1.5rem">Drop in an email, meeting transcript, or voice memo. The Founder Signal extractor parses commitments, detects deadlines and owners, and reconciles them into your ledger.</p>
+
+  <div class="card" style="max-width:800px">
     <form method="post">
-      <label for="field-kind">Kind</label>
-      <select id="field-kind" name="kind">
-        <option value="email">Email</option>
-        <option value="transcript">Meeting transcript</option>
-        <option value="voice-note">Voice-note transcript</option>
-      </select>
+      <div style="display:grid; grid-template-columns:180px 1fr; gap:1rem; align-items:start">
+        <div>
+          <label for="field-kind">Kind</label>
+          <select id="field-kind" name="kind">
+            <option value="email">✉️ Email</option>
+            <option value="transcript">🎙️ Meeting transcript</option>
+            <option value="voice-note">🗣️ Voice note</option>
+          </select>
+        </div>
+        <div>
+          <label for="field-title">Title</label>
+          <input id="field-title" type="text" name="title" placeholder="e.g. Accelerator update — Acme" required>
+        </div>
+      </div>
 
-      <label for="field-title">Title</label>
-      <input id="field-title" type="text" name="title" placeholder="e.g. Accelerator update — Acme">
+      <label for="field-body">Body text</label>
+      <textarea id="field-body" name="body" rows="12" placeholder="Paste email text, meeting transcript, or notes here…" required></textarea>
 
-      <label for="field-body">Body (email text or transcript)</label>
-      <textarea id="field-body" name="body" rows="12" placeholder="Paste email text or transcript here…"></textarea>
-
-      <button type="submit" class="btn">Ingest &amp; extract commitments</button>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-top:0.5rem">
+        <button type="submit" class="btn">Extract Commitments</button>
+        <span style="font-size:0.8125rem; color:var(--color-text-secondary)">Safe: commitments are proposed for your confirmation</span>
+      </div>
     </form>
   </div>
 
-  <p class="hint-tip">Tip: you can also pipe text via the CLI: <code>cat email.txt | python -m founder_signal.cli --kind email</code></p>
+  <p class="hint-tip">Tip: CLI piping is also supported: <code>cat email.txt | python -m founder_signal.cli --kind email</code></p>
 {% endblock %}
