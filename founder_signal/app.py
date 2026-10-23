@@ -53,6 +53,7 @@ def create_app(config: Config | None = None) -> Flask:
                     flash("Commitment updated.", "success")
                 elif action == "confirm":
                     # Mark as confirmed (still open, but acknowledged).
+                    ledger.update_commitment(commitment)
                     flash("Commitment confirmed.", "success")
                 return redirect(url_for("commitment_detail", commitment_id=commitment_id))
         finally:
