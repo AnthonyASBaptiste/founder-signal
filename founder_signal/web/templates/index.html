@@ -47,6 +47,24 @@
             <td><span class="source-chip">{{ c.source_id.split(':')[0] }}</span>{{ c.source_id }}</td>
             <td>
               <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-outline">View</a>
+              {% if c.status == 'open' %}
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Mark this commitment as done?')">
+                  <input type="hidden" name="status" value="done">
+                  <input type="hidden" name="next" value="{{ url_for('index') }}">
+                  <button type="submit" class="btn btn-sm btn-outline" style="background:#d1fae5; color:#065f46; border-color:#065f46">Done</button>
+                </form>
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Ignore this commitment?')">
+                  <input type="hidden" name="status" value="ignore">
+                  <input type="hidden" name="next" value="{{ url_for('index') }}">
+                  <button type="submit" class="btn btn-sm btn-outline" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af">Ignore</button>
+                </form>
+              {% elif c.status in ('done', 'ignore') %}
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Reopen this commitment?')">
+                  <input type="hidden" name="status" value="open">
+                  <input type="hidden" name="next" value="{{ url_for('index') }}">
+                  <button type="submit" class="btn btn-sm btn-outline" style="background:#dbeafe; color:#1e40af; border-color:#1e40af">Reopen</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}

@@ -40,7 +40,7 @@ class Commitment:
     due_date: Optional[str] = None  # ISO date string
     decision: Optional[str] = None
     follow_up: Optional[str] = None
-    status: str = "open"  # open | done | waiting | deferred
+    status: str = "open"  # open | done | waiting | deferred | ignore
     evidence: str = ""  # verbatim quote from source
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

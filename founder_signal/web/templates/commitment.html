@@ -21,6 +21,7 @@
         <option value="done" {% if commitment.status == 'done' %}selected{% endif %}>Done</option>
         <option value="waiting" {% if commitment.status == 'waiting' %}selected{% endif %}>Waiting</option>
         <option value="deferred" {% if commitment.status == 'deferred' %}selected{% endif %}>Deferred</option>
+        <option value="ignore" {% if commitment.status == 'ignore' %}selected{% endif %}>Ignore</option>
       </select>
 
       <label>Evidence (verbatim quote from source)</label>

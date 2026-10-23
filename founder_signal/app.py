@@ -17,7 +17,8 @@ from .briefing import generate_briefing
 
 
 def create_app(config: Config | None = None) -> Flask:
-    app = Flask(__name__)
+    template_folder = os.path.join(os.path.dirname(__file__), "web", "templates")
+    app = Flask(__name__, template_folder=template_folder)
     app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
     config = config or Config.from_env()
 
@@ -66,6 +67,26 @@ def create_app(config: Config | None = None) -> Flask:
         finally:
             ledger.close()
         return render_template("commitment.html", commitment=commitment, source=source)
+
+    @app.route("/commitments/<commitment_id>/status", methods=["POST"])
+    def commitment_status(commitment_id):
+        """Quick status change: mark done, ignore, reopen, etc."""
+        ledger = open_ledger(config)
+        try:
+            commitment = ledger.get_commitment(commitment_id)
+            if not commitment:
+                flash("Commitment not found.", "error")
+                return redirect(url_for("index"))
+            new_status = request.form.get("status")
+            if new_status not in ("open", "done", "waiting", "deferred", "ignore"):
+                flash("Invalid status.", "error")
+                return redirect(url_for("commitment_detail", commitment_id=commitment_id))
+            commitment.status = new_status
+            ledger.update_commitment(commitment)
+            flash(f"Commitment marked as {new_status}.", "success")
+        finally:
+            ledger.close()
+        return redirect(request.form.get("next") or url_for("index"))
 
     @app.route("/briefing")
     def briefing_view():
