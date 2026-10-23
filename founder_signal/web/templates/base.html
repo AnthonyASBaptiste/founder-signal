@@ -5,44 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Founder Signal</title>
   <style>
+    :root {
+      --color-bg: #f8fafc;
+      --color-surface: #ffffff;
+      --color-text: #0f172a;
+      --color-text-secondary: #475569;
+      --color-text-muted: #64748b;
+      --color-border: #e2e8f0;
+      --color-border-subtle: #f1f5f9;
+      --color-th-bg: #f8fafc;
+      --color-th-text: #334155;
+      --color-primary: #0f172a;
+      --color-primary-hover: #1e293b;
+      --color-link: #93c5fd;
+      --color-link-hover: #bfdbfe;
+      --color-focus: #2563eb;
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f7f8fa; color: #1f2937; }
-    header { background: #111827; color: #fff; padding: 1rem 1.5rem; }
+    body { font-family: var(--font-sans); margin: 0; background: var(--color-bg); color: var(--color-text); line-height: 1.5; }
+    header { background: #0f172a; color: #fff; padding: 1rem 1.5rem; }
     header h1 { margin: 0; font-size: 1.25rem; letter-spacing: -0.02em; }
-    header a { color: #93c5fd; text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
-    header a:hover { text-decoration: underline; }
+    header a { color: var(--color-link); text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+    header a:hover { color: var(--color-link-hover); text-decoration: underline; }
     .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-    .card h2 { margin: 0 0 0.75rem 0; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
-    .stat { font-size: 1.75rem; font-weight: 700; color: #111827; }
-    .stat small { font-size: 0.75rem; font-weight: 400; color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-    th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; }
-    th { background: #f3f4f6; font-size: 0.8rem; text-transform: uppercase; color: #6b7280; }
+    .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .card h2 { margin: 0 0 0.75rem 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 600; }
+    .stat { font-size: 1.85rem; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .stat small { font-size: 0.75rem; font-weight: 500; color: var(--color-text-secondary); }
+    table { width: 100%; border-collapse: collapse; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+    th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border); }
+    th { background: var(--color-th-bg); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-th-text); font-weight: 600; }
     tr:last-child td { border-bottom: none; }
-    .badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
+    .badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: var(--radius-sm); text-transform: uppercase; }
     .badge-open { background: #dbeafe; color: #1e40af; }
     .badge-done { background: #d1fae5; color: #065f46; }
     .badge-waiting { background: #fef3c7; color: #92400e; }
-    .badge-deferred { background: #e5e7eb; color: #374151; }
-    .badge-ignore { background: #f3f4f6; color: #6b7280; }
-    .evidence { font-size: 0.8rem; color: #6b7280; font-style: italic; margin-top: 0.25rem; }
-    .btn { background: #111827; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-    .btn:hover { background: #1f2937; }
+    .badge-deferred { background: #e2e8f0; color: #334155; }
+    .badge-ignore { background: #f1f5f9; color: #475569; }
+    .evidence { font-size: 0.8125rem; color: var(--color-text-secondary); font-style: italic; margin-top: 0.25rem; line-height: 1.4; }
+    .btn { background: var(--color-primary); color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.85rem; }
+    .btn:hover { background: var(--color-primary-hover); }
     .btn-sm { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
-    .btn-outline { background: transparent; border: 1px solid #111827; color: #111827; }
-    .btn-outline:hover { background: #111827; color: #fff; }
-    .flash { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .btn-outline { background: transparent; border: 1px solid var(--color-border); color: var(--color-text); }
+    .btn-outline:hover { background: var(--color-border-subtle); color: var(--color-text); }
+    .flash { padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.9rem; }
     .flash-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .flash-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .flash-warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-    form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: #374151; }
-    textarea, input[type="text"], input[type="date"], select { width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    form label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: #334155; }
+    textarea, input[type="text"], input[type="date"], select { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.9rem; margin-bottom: 0.75rem; font-family: inherit; }
     .section { margin-bottom: 2rem; }
-    .section h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #111827; border-bottom: 2px solid #111827; display: inline-block; }
-    .empty { color: #9ca3af; font-style: italic; font-size: 0.9rem; }
-    .source-chip { display: inline-block; background: #e5e7eb; color: #374151; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; margin-right: 0.4rem; text-transform: uppercase; }
+    .section h3 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--color-text); border-bottom: 2px solid var(--color-text); display: inline-block; }
+    .empty { color: var(--color-text-secondary); font-style: italic; font-size: 0.9rem; }
+    .hint-tip { color: var(--color-text-secondary); font-size: 0.85rem; margin-top: 1rem; }
+    .source-chip { display: inline-block; background: var(--color-border-subtle); color: var(--color-text-secondary); font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.4rem; border-radius: var(--radius-sm); margin-right: 0.4rem; text-transform: uppercase; }
   </style>
 </head>
 <body>
