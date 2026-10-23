@@ -6,17 +6,17 @@
 
   <div class="card">
     <form method="post">
-      <label>Description</label>
-      <textarea name="description" rows="3">{{ commitment.description }}</textarea>
+      <label for="field-description">Description</label>
+      <textarea id="field-description" name="description" rows="3">{{ commitment.description }}</textarea>
 
-      <label>Owner</label>
-      <input type="text" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
+      <label for="field-owner">Owner</label>
+      <input type="text" id="field-owner" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
 
-      <label>Due date</label>
-      <input type="date" name="due_date" value="{{ commitment.due_date or '' }}">
+      <label for="field-due-date">Due date</label>
+      <input type="date" id="field-due-date" name="due_date" value="{{ commitment.due_date or '' }}">
 
-      <label>Status</label>
-      <select name="status">
+      <label for="field-status">Status</label>
+      <select id="field-status" name="status">
         <option value="open" {% if commitment.status == 'open' %}selected{% endif %}>Open</option>
         <option value="done" {% if commitment.status == 'done' %}selected{% endif %}>Done</option>
         <option value="waiting" {% if commitment.status == 'waiting' %}selected{% endif %}>Waiting</option>
@@ -24,8 +24,8 @@
         <option value="ignore" {% if commitment.status == 'ignore' %}selected{% endif %}>Ignore</option>
       </select>
 
-      <label>Evidence (verbatim quote from source)</label>
-      <textarea name="evidence" rows="3">{{ commitment.evidence }}</textarea>
+      <label for="field-evidence">Evidence (verbatim quote from source)</label>
+      <textarea id="field-evidence" name="evidence" rows="3">{{ commitment.evidence }}</textarea>
 
       <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
 
@@ -35,10 +35,10 @@
   </div>
 
   {% if source %}
-  <div class="card" style="margin-top:1rem">
-    <h3>Source: {{ source.title }}</h3>
+  <div class="card" style="margin-top:1.5rem">
+    <h3 style="margin-top:0">{{ source.title }}</h3>
     <span class="source-chip">{{ source.kind }}</span>
-    <p style="white-space:pre-wrap; font-size:0.85rem; color:#374151; border-top:1px solid #e5e7eb; padding-top:0.75rem">{{ source.body[:500] }}{% if source.body|length > 500 %}…{% endif %}</p>
+    <p style="white-space:pre-wrap; font-size:0.875rem; color:var(--color-text); border-top:1px solid var(--color-border); padding-top:0.75rem; line-height:1.5">{{ source.body[:500] }}{% if source.body|length > 500 %}…{% endif %}</p>
   </div>
   {% endif %}
 {% endblock %}

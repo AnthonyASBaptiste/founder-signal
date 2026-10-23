@@ -2,22 +2,22 @@
 
 {% block content %}
   <h2 style="margin-top:0">Ingest source material</h2>
-  <p style="color:#6b7280; font-size:0.9rem">Drop in email text or a voice-note/meeting transcript. The Founder Signal skill extracts commitments, reconciles against the ledger, and adds them for your review.</p>
+  <p style="color:var(--color-text-secondary); font-size:0.95rem; line-height:1.5; margin-bottom:1.25rem">Drop in email text or a voice-note/meeting transcript. The Founder Signal skill extracts commitments, reconciles against the ledger, and adds them for your review.</p>
 
   <div class="card">
     <form method="post">
-      <label>Kind</label>
-      <select name="kind">
+      <label for="field-kind">Kind</label>
+      <select id="field-kind" name="kind">
         <option value="email">Email</option>
         <option value="transcript">Meeting transcript</option>
         <option value="voice-note">Voice-note transcript</option>
       </select>
 
-      <label>Title</label>
-      <input type="text" name="title" placeholder="e.g. Accelerator update — Acme">
+      <label for="field-title">Title</label>
+      <input id="field-title" type="text" name="title" placeholder="e.g. Accelerator update — Acme">
 
-      <label>Body (email text or transcript)</label>
-      <textarea name="body" rows="12" placeholder="Paste email text or transcript here…"></textarea>
+      <label for="field-body">Body (email text or transcript)</label>
+      <textarea id="field-body" name="body" rows="12" placeholder="Paste email text or transcript here…"></textarea>
 
       <button type="submit" class="btn">Ingest &amp; extract commitments</button>
     </form>
