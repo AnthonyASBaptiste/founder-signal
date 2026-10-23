@@ -15,7 +15,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from .models import Commitment, Source
@@ -96,19 +96,57 @@ def _now_iso() -> str:
 
 
 def _infer_due_date(due_date: Optional[str], description: str) -> Optional[str]:
-    """Convert relative dates to absolute YYYY-MM-DD, or suggest a due date when none stated.
+    """Convert relative or natural language dates to absolute YYYY-MM-DD.
 
     Returns the absolute date if one can be determined, otherwise None.
     """
-    if due_date:
-        # Already an explicit date; try to normalize to YYYY-MM-DD
-        m = re.search(r"(\d{4}-\d{2}-\d{2})", due_date)
-        if m:
-            return m.group(1)
+    candidate_text = f"{due_date or ''} {description or ''}".lower().strip()
+    if not candidate_text:
         return None
 
-    text = (description or "").lower()
+    # Check if already ISO format YYYY-MM-DD
+    m_iso = re.search(r"\b(\d{4}-\d{2}-\d{2})\b", candidate_text)
+    if m_iso:
+        return m_iso.group(1)
+
     today = datetime.now(timezone.utc).date()
+
+    # Month name + day pattern (e.g. "October 30" or "30 October")
+    month_map = {
+        "january": 1, "jan": 1, "february": 2, "feb": 2, "march": 3, "mar": 3,
+        "april": 4, "apr": 4, "may": 5, "june": 6, "jun": 6,
+        "july": 7, "jul": 7, "august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9,
+        "october": 10, "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
+    }
+    month_re = "|".join(month_map.keys())
+
+    # "October 30" or "Oct 30"
+    m_md = re.search(rf"\b({month_re})\s+(\d{{1,2}})(?:st|nd|rd|th)?\b", candidate_text)
+    if m_md:
+        m_name = m_md.group(1)
+        day = int(m_md.group(2))
+        month = month_map[m_name]
+        try:
+            cand = date(today.year, month, day)
+            if cand < today - timedelta(days=90):
+                cand = date(today.year + 1, month, day)
+            return cand.isoformat()
+        except ValueError:
+            pass
+
+    # "30 October" or "30th Oct"
+    m_dm = re.search(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({month_re})\b", candidate_text)
+    if m_dm:
+        day = int(m_dm.group(1))
+        m_name = m_dm.group(2)
+        month = month_map[m_name]
+        try:
+            cand = date(today.year, month, day)
+            if cand < today - timedelta(days=90):
+                cand = date(today.year + 1, month, day)
+            return cand.isoformat()
+        except ValueError:
+            pass
 
     # Relative weekday patterns
     weekday_map = {
@@ -117,38 +155,38 @@ def _infer_due_date(due_date: Optional[str], description: str) -> Optional[str]:
     }
 
     # "next Friday" / "next monday"
-    m = re.search(r"next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text)
+    m = re.search(r"\bnext\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", candidate_text)
     if m:
         target_wd = weekday_map[m.group(1)]
         days_ahead = (target_wd - today.weekday()) % 7
         if days_ahead == 0:
-            days_ahead = 7  # next week's same weekday
+            days_ahead = 7
         return (today + timedelta(days=days_ahead)).isoformat()
 
     # "this Friday" / "this monday"
-    m = re.search(r"this\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text)
+    m = re.search(r"\bthis\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", candidate_text)
     if m:
         target_wd = weekday_map[m.group(1)]
         days_ahead = (target_wd - today.weekday()) % 7
         return (today + timedelta(days=days_ahead)).isoformat()
 
     # "tomorrow"
-    if "tomorrow" in text:
+    if "tomorrow" in candidate_text:
         return (today + timedelta(days=1)).isoformat()
 
     # "end of week" / "by friday" / "eod friday"
-    if any(k in text for k in ["end of week", "by friday", "eod friday", "end of the week"]):
+    if any(k in candidate_text for k in ["end of week", "by friday", "eod friday", "end of the week"]):
         days_ahead = (4 - today.weekday()) % 7
         if days_ahead == 0:
             days_ahead = 7
         return (today + timedelta(days=days_ahead)).isoformat()
 
     # "end of day" / "eod" / "today"
-    if any(k in text for k in ["end of day", "eod", "by today", "today"]):
+    if any(k in candidate_text for k in ["end of day", "eod", "by today", "today"]):
         return today.isoformat()
 
     # "next week"
-    if "next week" in text:
+    if "next week" in candidate_text:
         return (today + timedelta(days=7)).isoformat()
 
     return None
@@ -383,9 +421,9 @@ def to_commitments(result: ExtractionResult, source_id: str) -> list[Commitment]
     """
     commitments: list[Commitment] = []
     for i, c in enumerate(result.commitments):
-        due_date = c.due_date
+        due_date = _infer_due_date(c.due_date, c.description)
         suggested_due_date = c.suggested_due_date
-        if not due_date:
+        if not due_date and not suggested_due_date:
             suggested_due_date = _infer_due_date(None, c.description)
         commitments.append(Commitment(
             id=f"{source_id}::c{i}",
