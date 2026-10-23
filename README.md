@@ -91,7 +91,10 @@ The web UI lets you:
 | `MONGODB_DATABASE` | `founder_signal` | Database name |
 | `WEB_HOST` / `WEB_PORT` | `127.0.0.1` / `5000` | Web UI bind address |
 | `BRIEFING_COMING_UP_DAYS` | `7` | Days ahead for "Coming up" |
-| `OPENAI_API_KEY` | — | Enables LLM-based extraction in the skill |
+| `OPENAI_API_KEY` | — | Enables OpenAI-based extraction in the skill |
+| `OLLAMA_HOST` | `http://localhost:11434` | Local Ollama host for privacy-first extraction |
+| `FOUNDER_SIGNAL_MODEL` | `gemma4:e2b-it-qat` | Ollama model to use |
+| `FOUNDER_SIGNAL_USE_LLM` | `false` | Set `true` to enable LLM extraction (Ollama or OpenAI) |
 
 ## Running tests
 

@@ -38,7 +38,7 @@ class ExtractedCommitment:
 class ExtractionResult:
     """Structured output of the Founder Signal skill."""
 
-    source: Source
+    source: Optional[Source] = None
     commitments: list[ExtractedCommitment] = field(default_factory=list)
     decisions: list[str] = field(default_factory=list)
     follow_ups: list[str] = field(default_factory=list)
@@ -57,23 +57,23 @@ Your job: read source material (email text, voice-note transcripts, meeting tran
 - Follow-ups: promised next actions or check-ins.
 - Deadlines: dates mentioned in connection with a commitment.
 
-Output structured JSON only, with this schema:
+Output structured JSON only, with this exact schema:
 {
   "commitments": [
-    {"description": "...", "owner": "...", "due_date": "YYYY-MM-DD or null", "evidence": "verbatim quote", "confidence": 0.0-1.0}
+    {"description": "short description", "owner": "person name or null", "due_date": "YYYY-MM-DD or null", "evidence": "verbatim quote from source", "confidence": 0.0-1.0}
   ],
-  "decisions": ["..."],
-  "follow_ups": ["..."],
+  "decisions": ["string"],
+  "follow_ups": ["string"],
   "summary": "one-sentence summary"
 }
 
 Rules:
+- commitments must be objects with description, owner, due_date, evidence, confidence fields (not bare strings).
 - Never invent a due date; use null when not stated.
 - Never invent an owner; use null when not stated.
 - evidence must be a verbatim quote from the source text.
 - Do not send messages, accept commitments, or mark anything complete. You only propose.
-- Be conservative: extract only what is explicitly stated.
-"""
+- Be conservative: extract only what is explicitly stated."""
 
 
 def _now_iso() -> str:
@@ -92,7 +92,11 @@ def _make_source(source_id: str, kind: str, title: str, body: str,
 
 
 def _parse_llm_json(raw: str) -> ExtractionResult | None:
-    """Best-effort parse of LLM JSON output."""
+    """Best-effort parse of LLM JSON output.
+
+    Handles both object-style commitments (with description/owner/due_date/etc.)
+    and string-style commitments (bare strings), normalizing the latter.
+    """
     try:
         start = raw.index("{")
         end = raw.rindex("}") + 1
@@ -101,15 +105,22 @@ def _parse_llm_json(raw: str) -> ExtractionResult | None:
         return None
     commitments = []
     for c in data.get("commitments", []):
-        commitments.append(ExtractedCommitment(
-            description=c.get("description", ""),
-            owner=c.get("owner"),
-            due_date=c.get("due_date"),
-            decision=c.get("decision"),
-            follow_up=c.get("follow_up"),
-            evidence=c.get("evidence", ""),
-            confidence=float(c.get("confidence", 0.5)),
-        ))
+        if isinstance(c, str):
+            commitments.append(ExtractedCommitment(
+                description=c,
+                evidence=c,
+                confidence=0.7,
+            ))
+        elif isinstance(c, dict):
+            commitments.append(ExtractedCommitment(
+                description=c.get("description", ""),
+                owner=c.get("owner"),
+                due_date=c.get("due_date"),
+                decision=c.get("decision"),
+                follow_up=c.get("follow_up"),
+                evidence=c.get("evidence", c.get("description", "")),
+                confidence=float(c.get("confidence", 0.5)),
+            ))
     return ExtractionResult(
         commitments=commitments,
         decisions=data.get("decisions", []),
@@ -186,13 +197,62 @@ def _rule_based_extract(source: Source) -> ExtractionResult:
     )
 
 
-def extract(source: Source, use_llm: bool = False) -> ExtractionResult:
+def _ollama_extract(source: Source, host: str, model: str) -> ExtractionResult | None:
+    """Run extraction via a local Ollama chat endpoint.
+
+    Returns an ExtractionResult on success, or None on failure so the caller
+    can fall back to rule-based extraction.
+    """
+    import urllib.request
+
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": SKILL_SYSTEM_PROMPT},
+            {"role": "user", "content": f"Source kind: {source.kind}\nTitle: {source.title}\nBody:\n{source.body}"},
+        ],
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": 0.2},
+    }
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        f"{host.rstrip('/')}/api/chat",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            body = resp.read().decode("utf-8")
+    except Exception:
+        return None
+
+    try:
+        obj = json.loads(body)
+        raw = obj.get("message", {}).get("content", "")
+    except (json.JSONDecodeError, KeyError):
+        return None
+
+    if not raw:
+        return None
+
+    parsed = _parse_llm_json(raw)
+    if parsed is not None:
+        parsed.source = source
+        parsed.raw = raw
+        return parsed
+    return None
+
+
+def extract(source: Source, use_llm: bool = False, config: Optional[Config] = None) -> ExtractionResult:
     """Run the Founder Signal extraction skill on a source.
 
     Args:
         source: The source material (email or transcript).
-        use_llm: If True and an API key is present, use the LLM; otherwise use
-            the deterministic rule-based extractor.
+        use_llm: If True and an LLM provider is available, use the LLM;
+            otherwise use the deterministic rule-based extractor.
+        config: Optional Config for Ollama host/model settings.
 
     Returns:
         ExtractionResult with proposed commitments, decisions, follow-ups.
@@ -200,7 +260,11 @@ def extract(source: Source, use_llm: bool = False) -> ExtractionResult:
     result = _rule_based_extract(source)
     result.source = source
 
-    if use_llm and os.environ.get("OPENAI_API_KEY"):
+    if not use_llm:
+        return result
+
+    # Try OpenAI first if an API key is present.
+    if os.environ.get("OPENAI_API_KEY"):
         try:
             from openai import OpenAI
             client = OpenAI()
@@ -220,8 +284,17 @@ def extract(source: Source, use_llm: bool = False) -> ExtractionResult:
                 parsed.raw = raw
                 return parsed
         except Exception:
-            # Fall through to rule-based result.
+            # Fall through to Ollama or rule-based.
             pass
+
+    # Try local Ollama (privacy-first, no API key needed).
+    cfg = config or Config.from_env()
+    try:
+        ollama_result = _ollama_extract(source, cfg.ollama_host, cfg.ollama_model)
+        if ollama_result is not None:
+            return ollama_result
+    except Exception:
+        pass
 
     return result
 

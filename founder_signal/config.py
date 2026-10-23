@@ -20,6 +20,9 @@ class Config:
     web_host: str = "127.0.0.1"
     web_port: int = 5000
     briefing_coming_up_days: int = 7
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = "gemma4:e2b-it-qat"
+    use_llm: bool = False
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -35,4 +38,10 @@ class Config:
             briefing_coming_up_days=int(
                 _getenv("BRIEFING_COMING_UP_DAYS", "7") or 7
             ),
+            ollama_host=_getenv("OLLAMA_HOST", "http://localhost:11434")
+            or "http://localhost:11434",
+            ollama_model=_getenv("FOUNDER_SIGNAL_MODEL", "gemma4:e2b-it-qat")
+            or "gemma4:e2b-it-qat",
+            use_llm=(_getenv("FOUNDER_SIGNAL_USE_LLM", "false") or "false").lower()
+            == "true",
         )

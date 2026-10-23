@@ -43,7 +43,7 @@ def _ingest(args, config: Config) -> int:
         source = Source(id=source_id, kind=kind, title=title, body=body)
 
         ledger.add_source(source)
-        result = extract(source, use_llm=args.llm)
+        result = extract(source, use_llm=args.llm, config=config)
         print(result.summary)
         print(f"Source: {source.id} ({source.kind})")
 

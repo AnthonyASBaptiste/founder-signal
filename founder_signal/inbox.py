@@ -83,7 +83,7 @@ class InboxWatcher:
         self.ledger.add_source(source)
 
         # Run the Founder Signal skill (extraction).
-        result = extract(source, use_llm=False)
+        result = extract(source, use_llm=self.config.use_llm, config=self.config)
 
         # Convert to proposed commitments and reconcile.
         proposed = to_commitments(result, source.id)
