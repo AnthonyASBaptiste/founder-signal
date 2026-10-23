@@ -78,11 +78,10 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
     """Reconcile newly extracted commitments against the existing ledger.
 
     For each new commitment:
-    - If identical to an existing open commitment -> duplicate issue.
-    - If similar but with different details -> change issue (propose merge).
-    - If missing owner/due_date -> missing_detail issue.
-    - If due within `within_days` -> approaching_deadline issue.
-    - Otherwise -> new commitment to be added.
+    - If identical to an existing open commitment -> duplicate issue (not added).
+    - Otherwise -> added to new_commitments, with any issues flagged:
+        * missing_detail: owner or due_date not stated
+        * approaching_deadline: due within `within_days`
 
     Returns proposed changes; does not mutate the ledger.
     """
@@ -107,6 +106,9 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
             ))
             continue
 
+        # Not a duplicate: add to new commitments, then flag any issues.
+        result.new_commitments.append(new)
+
         # Check for missing details.
         missing = _missing_detail(new)
         if missing:
@@ -117,7 +119,6 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
                 proposed=new,
                 evidence=new.evidence,
             ))
-            continue
 
         # Check approaching deadline.
         if _due_soon(new, within_days):
@@ -128,9 +129,6 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
                 proposed=new,
                 evidence=new.evidence,
             ))
-            continue
-
-        result.new_commitments.append(new)
 
     result.summary = (
         f"{len(result.new_commitments)} new commitment(s), "
