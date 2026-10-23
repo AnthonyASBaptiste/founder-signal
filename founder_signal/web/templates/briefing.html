@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2 style="margin-top:0">Morning Briefing</h2>
+  <p style="color:#6b7280; font-size:0.9rem">Generated {{ briefing.generated_at.strftime('%Y-%m-%d %H:%M') }} · {{ briefing.summary }}</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Do now</h2>
+      {% if briefing.do_now %}
+        <ul style="padding-left:1.1rem; margin:0">
+          {% for c in briefing.do_now %}
+            <li><strong>{{ c.description }}</strong> <span class="badge badge-{{ c.status }}">{{ c.status }}</span> · due {{ c.due_date or '—' }} <div class="evidence">{{ c.evidence[:120] }}</div></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty">Nothing overdue or due today.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Coming up</h2>
+      {% if briefing.coming_up %}
+        <ul style="padding-left:1.1rem; margin:0">
+          {% for c in briefing.coming_up %}
+            <li><strong>{{ c.description }}</strong> · due {{ c.due_date }} <div class="evidence">{{ c.evidence[:120] }}</div></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty">Nothing coming up.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Waiting on someone</h2>
+      {% if briefing.waiting_on %}
+        <ul style="padding-left:1.1rem; margin:0">
+          {% for c in briefing.waiting_on %}
+            <li><strong>{{ c.description }}</strong> · owner {{ c.owner }} · due {{ c.due_date or '—' }} <div class="evidence">{{ c.evidence[:120] }}</div></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty">Nothing waiting on someone.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Needs clarification</h2>
+      {% if briefing.needs_clarification %}
+        <ul style="padding-left:1.1rem; margin:0">
+          {% for c in briefing.needs_clarification %}
+            <li><strong>{{ c.description }}</strong> · missing: {% if not c.owner %}owner{% endif %}{% if not c.owner and not c.due_date %}, {% endif %}{% if not c.due_date %}due date{% endif %} <div class="evidence">{{ c.evidence[:120] }}</div></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty">Everything is clear.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <p><a href="{{ url_for('index') }}" class="btn btn-outline">← Back to dashboard</a></p>
+{% endblock %}

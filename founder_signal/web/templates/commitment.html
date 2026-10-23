@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2 style="margin-top:0">Commitment</h2>
+  <p><a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back to dashboard</a></p>
+
+  <div class="card">
+    <form method="post">
+      <label>Description</label>
+      <textarea name="description" rows="3">{{ commitment.description }}</textarea>
+
+      <label>Owner</label>
+      <input type="text" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
+
+      <label>Due date</label>
+      <input type="date" name="due_date" value="{{ commitment.due_date or '' }}">
+
+      <label>Status</label>
+      <select name="status">
+        <option value="open" {% if commitment.status == 'open' %}selected{% endif %}>Open</option>
+        <option value="done" {% if commitment.status == 'done' %}selected{% endif %}>Done</option>
+        <option value="waiting" {% if commitment.status == 'waiting' %}selected{% endif %}>Waiting</option>
+        <option value="deferred" {% if commitment.status == 'deferred' %}selected{% endif %}>Deferred</option>
+      </select>
+
+      <label>Evidence (verbatim quote from source)</label>
+      <textarea name="evidence" rows="3">{{ commitment.evidence }}</textarea>
+
+      <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
+
+      <button type="submit" name="action" value="update" class="btn">Update commitment</button>
+      <button type="submit" name="action" value="confirm" class="btn btn-outline">Confirm (no change)</button>
+    </form>
+  </div>
+
+  {% if source %}
+  <div class="card" style="margin-top:1rem">
+    <h3>Source: {{ source.title }}</h3>
+    <span class="source-chip">{{ source.kind }}</span>
+    <p style="white-space:pre-wrap; font-size:0.85rem; color:#374151; border-top:1px solid #e5e7eb; padding-top:0.75rem">{{ source.body[:500] }}{% if source.body|length > 500 %}…{% endif %}</p>
+  </div>
+  {% endif %}
+{% endblock %}
