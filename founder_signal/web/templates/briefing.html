@@ -15,18 +15,18 @@
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Mark as done?')">
                   <input type="hidden" name="status" value="done">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#d1fae5; color:#065f46; border-color:#065f46">Done</button>
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                 </form>
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Ignore?')">
                   <input type="hidden" name="status" value="ignore">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af">Ignore</button>
+                  <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                 </form>
               {% elif c.status in ('done', 'ignore') %}
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Reopen?')">
                   <input type="hidden" name="status" value="open">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#dbeafe; color:#1e40af; border-color:#1e40af">Reopen</button>
+                  <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                 </form>
               {% endif %}
             </li>
@@ -46,18 +46,18 @@
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Mark as done?')">
                   <input type="hidden" name="status" value="done">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#d1fae5; color:#065f46; border-color:#065f46">Done</button>
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                 </form>
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Ignore?')">
                   <input type="hidden" name="status" value="ignore">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af">Ignore</button>
+                  <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                 </form>
               {% elif c.status in ('done', 'ignore') %}
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Reopen?')">
                   <input type="hidden" name="status" value="open">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#dbeafe; color:#1e40af; border-color:#1e40af">Reopen</button>
+                  <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                 </form>
               {% endif %}
             </li>
@@ -77,18 +77,18 @@
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Mark as done?')">
                   <input type="hidden" name="status" value="done">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#d1fae5; color:#065f46; border-color:#065f46">Done</button>
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                 </form>
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Ignore?')">
                   <input type="hidden" name="status" value="ignore">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af">Ignore</button>
+                  <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                 </form>
               {% elif c.status in ('done', 'ignore') %}
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Reopen?')">
                   <input type="hidden" name="status" value="open">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#dbeafe; color:#1e40af; border-color:#1e40af">Reopen</button>
+                  <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                 </form>
               {% endif %}
             </li>
@@ -108,18 +108,18 @@
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Mark as done?')">
                   <input type="hidden" name="status" value="done">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#d1fae5; color:#065f46; border-color:#065f46">Done</button>
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                 </form>
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Ignore?')">
                   <input type="hidden" name="status" value="ignore">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#f3f4f6; color:#6b7280; border-color:#9ca3af">Ignore</button>
+                  <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                 </form>
               {% elif c.status in ('done', 'ignore') %}
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return confirm('Reopen?')">
                   <input type="hidden" name="status" value="open">
                   <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                  <button type="submit" class="btn btn-sm btn-outline" style="background:#dbeafe; color:#1e40af; border-color:#1e40af">Reopen</button>
+                  <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                 </form>
               {% endif %}
             </li>
