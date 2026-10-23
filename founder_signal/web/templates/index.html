@@ -23,6 +23,7 @@
   <div class="section">
     <h3>All commitments</h3>
     {% if commitments %}
+      <div class="table-container">
       <table>
         <thead>
           <tr>
@@ -72,6 +73,7 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
       <p class="empty">No commitments yet. Ingest some email text or a transcript to get started.</p>
     {% endif %}
