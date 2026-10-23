@@ -35,6 +35,11 @@
     header nav a:hover { color: #ffffff; background: rgba(255, 255, 255, 0.12); text-decoration: none; }
     .container { width: 100%; max-width: 1080px; margin: 0 auto; padding: 1.75rem 1.25rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .grid-briefing { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+    .briefing-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+    .briefing-item { padding: 0.85rem 1rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .briefing-item-meta { font-size: 0.8125rem; color: var(--color-text-secondary); margin-top: 0.25rem; }
+    .briefing-actions { margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
     .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     .card h2 { margin: 0 0 0.75rem 0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); font-weight: 600; }
     .stat { font-size: 1.85rem; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
