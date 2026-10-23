@@ -28,18 +28,9 @@ def create_app(config: Config | None = None) -> Flask:
         try:
             briefing = generate_briefing(ledger, coming_up_days=config.briefing_coming_up_days)
             commitments = ledger.list_commitments()
-            sources = []
-            # Gather unique sources for display.
-            seen = set()
-            for c in commitments:
-                if c.source_id not in seen:
-                    seen.add(c.source_id)
-                    src = ledger.get_source(c.source_id)
-                    if src:
-                        sources.append(src)
         finally:
             ledger.close()
-        return render_template("index.html", briefing=briefing, commitments=commitments, sources=sources)
+        return render_template("index.html", briefing=briefing, commitments=commitments)
 
     @app.route("/commitments/<commitment_id>", methods=["GET", "POST"])
     def commitment_detail(commitment_id):
