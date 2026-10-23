@@ -15,7 +15,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .models import Commitment, Source
@@ -27,7 +27,9 @@ class ExtractedCommitment:
 
     description: str
     owner: Optional[str] = None
-    due_date: Optional[str] = None  # ISO date string
+    due_date: Optional[str] = None  # ISO date string (explicitly stated)
+    suggested_due_date: Optional[str] = None  # inferred absolute date when none stated
+    direction: Optional[str] = None  # "user_committing" | "user_requested" | "third_party"
     decision: Optional[str] = None
     follow_up: Optional[str] = None
     evidence: str = ""  # verbatim quote from source
@@ -51,16 +53,29 @@ class ExtractionResult:
 # message.
 SKILL_SYSTEM_PROMPT = """You are the Founder Signal skill, a specialist agent for founders who receive more information, requests and opportunities than they have time to process.
 
-Your job: read source material (email text, voice-note transcripts, meeting transcripts) and extract ONLY the following, each anchored to verbatim source evidence:
-- Commitments: promises to do something, with an owner and due date if stated.
-- Decisions: conclusions reached.
-- Follow-ups: promised next actions or check-ins.
-- Deadlines: dates mentioned in connection with a commitment.
+Your job: read source material (email text, voice-note transcripts, meeting transcripts) and extract ONLY commitments that are directed at or made by the founder (the recipient of this message).
+
+First, identify who the founder/recipient is from the email headers (To:, Cc:) or the body context. Then extract ONLY:
+
+- Commitments the founder is making ("I will do X", "I'll send Y")
+- Commitments others are making TO the founder ("Please review this", "I will send you the contract")
+- Commitments where the founder is clearly the intended owner or beneficiary
+
+Do NOT extract:
+- General statements, newsletters, marketing content, or FYI information
+- Commitments between third parties that don't involve the founder
+- Auto-generated text, signatures, disclaimers, or boilerplate
+- Statements that are just information sharing, not action items
+
+For each commitment, determine the direction:
+- "user_committing" — the founder promised to do something
+- "user_requested" — someone asked the founder to do something
+- "third_party" — someone else committed to do something for the founder
 
 Output structured JSON only, with this exact schema:
 {
   "commitments": [
-    {"description": "short description", "owner": "person name or null", "due_date": "YYYY-MM-DD or null", "evidence": "verbatim quote from source", "confidence": 0.0-1.0}
+    {"description": "short description", "owner": "person name or null", "due_date": "YYYY-MM-DD or null", "direction": "user_committing | user_requested | third_party", "evidence": "verbatim quote from source", "confidence": 0.0-1.0}
   ],
   "decisions": ["string"],
   "follow_ups": ["string"],
@@ -68,16 +83,75 @@ Output structured JSON only, with this exact schema:
 }
 
 Rules:
-- commitments must be objects with description, owner, due_date, evidence, confidence fields (not bare strings).
-- Never invent a due date; use null when not stated.
+- commitments must be objects with description, owner, due_date, direction, evidence, confidence fields (not bare strings).
+- Convert relative dates to absolute YYYY-MM-DD when possible (e.g. "next Friday" → actual date, "end of week" → Friday of this week, "tomorrow" → tomorrow's date). Use null only when no date can be determined.
 - Never invent an owner; use null when not stated.
 - evidence must be a verbatim quote from the source text.
 - Do not send messages, accept commitments, or mark anything complete. You only propose.
-- Be conservative: extract only what is explicitly stated."""
+- Be conservative: extract only what is explicitly stated and directed at the founder."""
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _infer_due_date(due_date: Optional[str], description: str) -> Optional[str]:
+    """Convert relative dates to absolute YYYY-MM-DD, or suggest a due date when none stated.
+
+    Returns the absolute date if one can be determined, otherwise None.
+    """
+    if due_date:
+        # Already an explicit date; try to normalize to YYYY-MM-DD
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", due_date)
+        if m:
+            return m.group(1)
+        return None
+
+    text = (description or "").lower()
+    today = datetime.now(timezone.utc).date()
+
+    # Relative weekday patterns
+    weekday_map = {
+        "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+        "friday": 4, "saturday": 5, "sunday": 6,
+    }
+
+    # "next Friday" / "next monday"
+    m = re.search(r"next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text)
+    if m:
+        target_wd = weekday_map[m.group(1)]
+        days_ahead = (target_wd - today.weekday()) % 7
+        if days_ahead == 0:
+            days_ahead = 7  # next week's same weekday
+        return (today + timedelta(days=days_ahead)).isoformat()
+
+    # "this Friday" / "this monday"
+    m = re.search(r"this\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text)
+    if m:
+        target_wd = weekday_map[m.group(1)]
+        days_ahead = (target_wd - today.weekday()) % 7
+        return (today + timedelta(days=days_ahead)).isoformat()
+
+    # "tomorrow"
+    if "tomorrow" in text:
+        return (today + timedelta(days=1)).isoformat()
+
+    # "end of week" / "by friday" / "eod friday"
+    if any(k in text for k in ["end of week", "by friday", "eod friday", "end of the week"]):
+        days_ahead = (4 - today.weekday()) % 7
+        if days_ahead == 0:
+            days_ahead = 7
+        return (today + timedelta(days=days_ahead)).isoformat()
+
+    # "end of day" / "eod" / "today"
+    if any(k in text for k in ["end of day", "eod", "by today", "today"]):
+        return today.isoformat()
+
+    # "next week"
+    if "next week" in text:
+        return (today + timedelta(days=7)).isoformat()
+
+    return None
 
 
 def _make_source(source_id: str, kind: str, title: str, body: str,
@@ -116,6 +190,8 @@ def _parse_llm_json(raw: str) -> ExtractionResult | None:
                 description=c.get("description", ""),
                 owner=c.get("owner"),
                 due_date=c.get("due_date"),
+                suggested_due_date=c.get("suggested_due_date"),
+                direction=c.get("direction"),
                 decision=c.get("decision"),
                 follow_up=c.get("follow_up"),
                 evidence=c.get("evidence", c.get("description", "")),
@@ -300,15 +376,25 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
 
 
 def to_commitments(result: ExtractionResult, source_id: str) -> list[Commitment]:
-    """Convert an ExtractionResult into proposed Commitment records (status=open)."""
+    """Convert an ExtractionResult into proposed Commitment records (status=open).
+
+    Applies due date inference when no explicit due date is found, and carries
+    the direction field through so the UI can filter non-directed commitments.
+    """
     commitments: list[Commitment] = []
     for i, c in enumerate(result.commitments):
+        due_date = c.due_date
+        suggested_due_date = c.suggested_due_date
+        if not due_date:
+            suggested_due_date = _infer_due_date(None, c.description)
         commitments.append(Commitment(
             id=f"{source_id}::c{i}",
             source_id=source_id,
             description=c.description,
             owner=c.owner,
-            due_date=c.due_date,
+            due_date=due_date,
+            suggested_due_date=suggested_due_date,
+            direction=c.direction,
             decision=c.decision,
             follow_up=c.follow_up,
             status="open",

@@ -38,6 +38,8 @@ class Commitment:
     description: str
     owner: Optional[str] = None
     due_date: Optional[str] = None  # ISO date string
+    suggested_due_date: Optional[str] = None  # inferred absolute date when none stated
+    direction: Optional[str] = None  # "user_committing" | "user_requested" | "third_party"
     decision: Optional[str] = None
     follow_up: Optional[str] = None
     status: str = "open"  # open | done | waiting | deferred | ignore
@@ -52,6 +54,8 @@ class Commitment:
             "description": self.description,
             "owner": self.owner,
             "due_date": self.due_date,
+            "suggested_due_date": self.suggested_due_date,
+            "direction": self.direction,
             "decision": self.decision,
             "follow_up": self.follow_up,
             "status": self.status,
@@ -68,6 +72,8 @@ class Commitment:
             description=d["description"],
             owner=d.get("owner"),
             due_date=d.get("due_date"),
+            suggested_due_date=d.get("suggested_due_date"),
+            direction=d.get("direction"),
             decision=d.get("decision"),
             follow_up=d.get("follow_up"),
             status=d.get("status", "open"),

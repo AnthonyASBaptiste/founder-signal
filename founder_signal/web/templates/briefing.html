@@ -4,6 +4,13 @@
   <h2 style="margin-top:0">Morning Briefing</h2>
   <p style="color:var(--color-text-secondary); font-size:0.95rem; margin-bottom:1.5rem">Generated {{ briefing.generated_at.strftime('%Y-%m-%d %H:%M') }} · {{ briefing.summary }}</p>
 
+  {% if not briefing.do_now and not briefing.coming_up and not briefing.waiting_on and not briefing.needs_clarification %}
+    <div class="empty-state" style="text-align:center; padding:3rem 1rem; background:var(--color-surface); border:1px solid var(--color-border); border-radius:12px; margin-bottom:1.5rem">
+      <h2 style="color:var(--color-success); margin:0 0 0.5rem 0">🎉 Congrats, you're caught up</h2>
+      <p style="color:var(--color-text-secondary); margin:0">No open commitments. Everything is under control.</p>
+    </div>
+  {% endif %}
+
   <div class="grid-briefing">
     <div class="card">
       <h2>Do now</h2>

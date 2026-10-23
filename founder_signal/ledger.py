@@ -76,6 +76,8 @@ class SQLiteLedger(Ledger):
                 description TEXT NOT NULL,
                 owner TEXT,
                 due_date TEXT,
+                suggested_due_date TEXT,
+                direction TEXT,
                 decision TEXT,
                 follow_up TEXT,
                 status TEXT NOT NULL DEFAULT 'open',
@@ -89,6 +91,13 @@ class SQLiteLedger(Ledger):
             CREATE INDEX IF NOT EXISTS idx_commitments_due ON commitments(due_date);
             """
         )
+        # Migration: add new columns to existing databases
+        cur.execute("PRAGMA table_info(commitments)")
+        existing_cols = {row["name"] for row in cur.fetchall()}
+        if "suggested_due_date" not in existing_cols:
+            cur.execute("ALTER TABLE commitments ADD COLUMN suggested_due_date TEXT")
+        if "direction" not in existing_cols:
+            cur.execute("ALTER TABLE commitments ADD COLUMN direction TEXT")
         self.conn.commit()
 
     def add_source(self, source: Source) -> None:
@@ -124,14 +133,16 @@ class SQLiteLedger(Ledger):
     def add_commitment(self, commitment: Commitment) -> None:
         self.conn.execute(
             "INSERT OR REPLACE INTO commitments "
-            "(id, source_id, description, owner, due_date, decision, follow_up, status, evidence, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "(id, source_id, description, owner, due_date, suggested_due_date, direction, decision, follow_up, status, evidence, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 commitment.id,
                 commitment.source_id,
                 commitment.description,
                 commitment.owner,
                 commitment.due_date,
+                commitment.suggested_due_date,
+                commitment.direction,
                 commitment.decision,
                 commitment.follow_up,
                 commitment.status,
@@ -166,12 +177,14 @@ class SQLiteLedger(Ledger):
     def update_commitment(self, commitment: Commitment) -> None:
         commitment.updated_at = datetime.now(timezone.utc)
         self.conn.execute(
-            "UPDATE commitments SET description=?, owner=?, due_date=?, decision=?, "
+            "UPDATE commitments SET description=?, owner=?, due_date=?, suggested_due_date=?, direction=?, decision=?, "
             "follow_up=?, status=?, evidence=?, updated_at=? WHERE id=?",
             (
                 commitment.description,
                 commitment.owner,
                 commitment.due_date,
+                commitment.suggested_due_date,
+                commitment.direction,
                 commitment.decision,
                 commitment.follow_up,
                 commitment.status,
@@ -200,6 +213,8 @@ class SQLiteLedger(Ledger):
             description=row["description"],
             owner=row["owner"],
             due_date=row["due_date"],
+            suggested_due_date=row["suggested_due_date"],
+            direction=row["direction"],
             decision=row["decision"],
             follow_up=row["follow_up"],
             status=row["status"],
