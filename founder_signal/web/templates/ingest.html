@@ -35,15 +35,15 @@
 
       <!-- Transcript: file upload -->
       <div id="input-transcript" style="display:none">
-        <label for="field-file">Transcript file</label>
-        <input id="field-file" type="file" name="file" accept=".txt,.md" required>
+        <label for="field-file-transcript">Transcript file</label>
+        <input id="field-file-transcript" type="file" name="file" accept=".txt,.md">
         <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload a .txt or .md transcript file. The text will be extracted for commitment analysis.</p>
       </div>
 
       <!-- Voice note: audio file upload -->
       <div id="input-voice-note" style="display:none">
-        <label for="field-file">Audio file</label>
-        <input id="field-file" type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.aac" required>
+        <label for="field-file-audio">Audio file</label>
+        <input id="field-file-audio" type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.aac">
         <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload an audio file. It will be saved to your inbox folder. Transcription is needed before commitments can be extracted — add a transcript file or paste the transcript text separately.</p>
       </div>
 
@@ -69,16 +69,20 @@
       transcript: document.getElementById('input-transcript'),
       'voice-note': document.getElementById('input-voice-note'),
     };
-    const fileInput = document.getElementById('field-file');
     const bodyInput = document.getElementById('field-body');
+    const fileTranscript = document.getElementById('field-file-transcript');
+    const fileAudio = document.getElementById('field-file-audio');
 
     function updateInputs() {
       const kind = kindSelect.value;
       Object.values(inputs).forEach(el => el.style.display = 'none');
       inputs[kind].style.display = 'block';
-      // Toggle required attributes
-      bodyInput.required = kind === 'email';
-      fileInput.required = kind !== 'email';
+
+      bodyInput.required = (kind === 'email');
+      fileTranscript.required = (kind === 'transcript');
+      fileTranscript.disabled = (kind !== 'transcript');
+      fileAudio.required = (kind === 'voice-note');
+      fileAudio.disabled = (kind !== 'voice-note');
     }
 
     kindSelect.addEventListener('change', updateInputs);
