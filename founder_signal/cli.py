@@ -158,7 +158,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args_list = list(sys.argv[1:] if argv is None else argv)
+    known_commands = {"ingest", "scan", "heartbeat", "briefing", "watch", "-h", "--help"}
+    if args_list and args_list[0] not in known_commands:
+        args_list.insert(0, "ingest")
+    args = parser.parse_args(args_list)
     config = Config.from_env()
     return args.func(args, config)
 
