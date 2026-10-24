@@ -28,8 +28,36 @@ from .extraction import extract, to_commitments
 from .reconciliation import reconcile
 from .briefing import generate_briefing
 
-HIMALAYA_BIN = "/home/anthony/.local/bin/himalaya"
-HERMES_BIN = "/home/anthony/.local/bin/hermes"
+HIMALAYA_BIN = os.environ.get("HIMALAYA_BIN", "himalaya")
+HERMES_BIN = os.environ.get("HERMES_BIN", "hermes")
+
+# Optional local transcription for voice notes. Requires `pip install
+# openai-whisper` (and ffmpeg on the system). When unavailable, audio files
+# are saved to the inbox with a "transcription needed" note.
+_whisper_model = None
+
+
+def _transcribe_audio(file_path: Path) -> Optional[str]:
+    """Transcribe an audio file with openai-whisper (local, offline).
+
+    Returns the transcript text, or None if whisper is not installed or
+    transcription fails.
+    """
+    global _whisper_model
+    try:
+        import whisper  # type: ignore
+    except ImportError:
+        return None
+    if _whisper_model is None:
+        try:
+            _whisper_model = whisper.load_model("base")
+        except Exception:
+            return None
+    try:
+        result = _whisper_model.transcribe(str(file_path))
+        return (result.get("text") or "").strip() or None
+    except Exception:
+        return None
 
 
 class InboxWatcher:
@@ -78,14 +106,55 @@ class InboxWatcher:
         """Process a single inbox file through extraction, reconciliation, briefing."""
         ext = file_path.suffix.lower()
 
-        # Audio files cannot be read as text; they need transcription first.
+        # Audio files (voice notes): transcribe locally if possible, then
+        # extract commitments from the transcript like any other source.
         if ext in self.AUDIO_EXTENSIONS:
+            transcript = _transcribe_audio(file_path)
+            if transcript:
+                kind = "voice-note"
+                title = file_path.stem
+                source_id = (
+                    f"inbox:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
+                )
+                source = Source(id=source_id, kind=kind, title=title, body=transcript)
+
+                # Persist source.
+                self.ledger.add_source(source)
+
+                # Run the Founder Signal skill (extraction) with per-account founder identity.
+                result = extract(
+                    source,
+                    use_llm=self.config.use_llm,
+                    config=self.config,
+                    account=account,
+                )
+
+                # Convert to proposed commitments and reconcile.
+                proposed = to_commitments(result, source.id)
+                reconciliation = reconcile(
+                    self.ledger,
+                    proposed,
+                    within_days=self.config.briefing_coming_up_days,
+                )
+
+                # Add new commitments to the ledger (proposed; awaiting confirmation).
+                for c in reconciliation.new_commitments:
+                    self.ledger.add_commitment(c)
+
+                print(
+                    f"[founder-signal] {file_path.name}: transcribed voice note, "
+                    f"{len(reconciliation.new_commitments)} new commitment(s), "
+                    f"{len(reconciliation.issues)} issue(s) needing review."
+                )
+            else:
+                print(
+                    f"[founder-signal] {file_path.name}: audio file saved to inbox. "
+                    f"Transcription is needed before commitments can be extracted. "
+                    f"Install openai-whisper (pip install openai-whisper) for "
+                    f"automatic transcription, or add a transcript file / paste "
+                    f"the transcript text via the web app."
+                )
             self._mark_done(file_path)
-            print(
-                f"[founder-signal] {file_path.name}: audio file saved to inbox. "
-                f"Transcription is needed before commitments can be extracted. "
-                f"Add a transcript file or paste the transcript text via the web app."
-            )
             return
 
         body = file_path.read_text(encoding="utf-8", errors="replace")

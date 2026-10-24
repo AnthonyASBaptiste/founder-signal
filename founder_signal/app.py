@@ -131,6 +131,7 @@ def create_app(config: Config | None = None) -> Flask:
 
             body: str | None = None
             saved_path: str | None = None
+            transcript: str | None = None
 
             if kind == "email":
                 # Straight email: paste text.
@@ -172,14 +173,22 @@ def create_app(config: Config | None = None) -> Flask:
                         flash("Transcript file is empty.", "error")
                         return redirect(url_for("ingest"))
                 else:
-                    # Voice note (audio): save file, note that transcription is needed.
-                    body = (
-                        f"[Voice note audio file: {file.filename}]\n"
-                        f"Saved to: {saved_path}\n"
-                        f"This is an audio file. Transcription is needed before "
-                        f"commitments can be extracted. Add a transcript file or "
-                        f"paste the transcript text separately."
-                    )
+                    # Voice note (audio): save file, transcribe locally if
+                    # possible, then extract commitments from the transcript.
+                    from .inbox import _transcribe_audio
+
+                    transcript = _transcribe_audio(Path(saved_path))
+                    if transcript:
+                        body = transcript
+                    else:
+                        body = (
+                            f"[Voice note audio file: {file.filename}]\n"
+                            f"Saved to: {saved_path}\n"
+                            f"This is an audio file. Transcription is needed before "
+                            f"commitments can be extracted. Install openai-whisper "
+                            f"(`pip install openai-whisper`) for automatic "
+                            f"transcription, or paste the transcript text separately."
+                        )
 
             source_id = f"web:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
             source = Source(id=source_id, kind=kind, title=title, body=body)
@@ -187,11 +196,17 @@ def create_app(config: Config | None = None) -> Flask:
             try:
                 new_count, issues = _process_source(source, config, use_llm=use_llm)
                 if kind == "voice-note":
-                    flash(
-                        f"Voice note '{title}' saved to inbox. "
-                        f"Transcription needed before commitment extraction.",
-                        "warning",
-                    )
+                    if transcript:
+                        flash(
+                            f"Voice note '{title}' transcribed: {new_count} new commitment(s)",
+                            "success",
+                        )
+                    else:
+                        flash(
+                            f"Voice note '{title}' saved to inbox. "
+                            f"Transcription needed before commitment extraction.",
+                            "warning",
+                        )
                 else:
                     flash(
                         f"Ingested {kind} '{title}': {new_count} new commitment(s)",

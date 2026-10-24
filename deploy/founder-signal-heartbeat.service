@@ -5,8 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/anthony/Projects/founder-signal/.worktrees/anthonyasbaptiste-ideal-invention
-EnvironmentFile=/home/anthony/Projects/founder-signal/.worktrees/anthonyasbaptiste-ideal-invention/.env
+# Set WorkingDirectory to your Founder Signal checkout, e.g.:
+# WorkingDirectory=/home/yourname/founder-signal
+# Or set FOUNDER_SIGNAL_HOME in the EnvironmentFile below and use a wrapper.
+WorkingDirectory=/opt/founder-signal
+EnvironmentFile=-/opt/founder-signal/.env
 ExecStart=/usr/bin/python3 -m founder_signal.cli heartbeat --accounts zoho,gmail
 
 [Install]

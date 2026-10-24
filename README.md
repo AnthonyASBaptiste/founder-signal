@@ -46,8 +46,9 @@ deploy/              systemd service + timer for periodic heartbeat
 ## Setup
 
 ```bash
-# Clone / open the worktree
-cd /home/anthony/Projects/founder-signal/.worktrees/anthonyasbaptiste-founder-signal
+# Clone the repository
+git clone https://github.com/AnthonyASBaptiste/founder-signal.git
+cd founder-signal
 
 # Install dependencies
 pip install -r requirements.txt
@@ -116,7 +117,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now founder-signal-heartbeat.timer
 ```
 
-The service runs `python -m founder_signal.cli heartbeat --accounts zoho,gmail`. Edit the `--accounts` list in the service file or override via CLI args.
+Before enabling, edit `deploy/founder-signal-heartbeat.service` to set
+`WorkingDirectory` to your Founder Signal checkout and `EnvironmentFile` to
+your `.env` location. The paths are intentionally not hard-coded to a
+specific machine — adjust them for your environment.
+
+The service runs `python -m founder_signal.cli heartbeat --accounts zoho,gmail`.
+Edit the `--accounts` list in the service file or override via CLI args.
 
 ## Web UI
 
@@ -135,6 +142,9 @@ The web UI lets you:
 | `LEDGER_SQLITE_PATH` | `data/founder_signal.db` | SQLite database path |
 | `MONGODB_URI` | — | MongoDB Atlas connection string |
 | `MONGODB_DATABASE` | `founder_signal` | Database name |
+| `HERMES_SKILL_HOST` | `127.0.0.1` | Hermes skill server host |
+| `HERMES_SKILL_PORT` | `8765` | Hermes skill server port |
+| `HERMES_SKILL_ENDPOINT` | `http://127.0.0.1:8765/skills/founder-signal` | Hermes skill invoke endpoint |
 | `WEB_HOST` / `WEB_PORT` | `127.0.0.1` / `5000` | Web UI bind address |
 | `BRIEFING_COMING_UP_DAYS` | `7` | Days ahead for "Coming up" |
 | `FOUNDER_SIGNAL_INBOX` | `~/Downloads/founder-signal-inbox` | Inbox folder for dropped files |
@@ -157,6 +167,16 @@ Per-account founder identity lets you use different founder names/emails for dif
 pip install pytest
 python -m pytest tests/ -v
 ```
+
+## Demo
+
+A scripted, judge-ready demo runs the full workflow offline (no API keys):
+
+```bash
+FOUNDER_NAME=Anthony bash demo/demo.sh
+```
+
+See `demo/DEMO.md` for the walkthrough, sample data, and effort-saved estimate.
 
 ## Hackathon
 
