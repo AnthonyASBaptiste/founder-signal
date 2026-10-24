@@ -25,7 +25,7 @@ class Config:
     use_llm: bool = False
     founder_name: str = "Anthony"
     founder_email: str | None = None
-    inbox_folder: str = "~/founder-signal-inbox"
+    inbox_folder: str = "~/Downloads/founder-signal-inbox"
     max_upload_mb: int = 25
     upload_extensions: str = "txt,md,mp3,wav,m4a,ogg,aac"
 
@@ -65,8 +65,8 @@ class Config:
             == "true",
             founder_name=_getenv("FOUNDER_NAME", "Anthony") or "Anthony",
             founder_email=_getenv("FOUNDER_EMAIL"),
-            inbox_folder=_getenv("FOUNDER_SIGNAL_INBOX", "~/founder-signal-inbox")
-            or "~/founder-signal-inbox",
+            inbox_folder=_getenv("FOUNDER_SIGNAL_INBOX", "~/Downloads/founder-signal-inbox")
+            or "~/Downloads/founder-signal-inbox",
             max_upload_mb=int(_getenv("FOUNDER_SIGNAL_MAX_UPLOAD_MB", "25") or 25),
             upload_extensions=_getenv(
                 "FOUNDER_SIGNAL_UPLOAD_EXTENSIONS", "txt,md,mp3,wav,m4a,ogg,aac"
