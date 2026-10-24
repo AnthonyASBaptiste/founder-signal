@@ -283,7 +283,11 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
         cleaned.append(stripped)
 
     # --- Identify the founder from headers ---
-    founder_in_to = False
+    has_headers = any(
+        re.match(r"^(From|To|Cc|Bcc|Subject|Date):\s", line.strip(), re.IGNORECASE)
+        for line in body.splitlines()
+    )
+    founder_in_to = not has_headers  # Default to primary recipient if no headers
     founder_in_cc = False
     for line in body.splitlines():
         low = line.lower()
@@ -298,6 +302,9 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
                     founder_in_to = True
                 else:
                     founder_in_cc = True
+
+    founder_is_primary = founder_in_to  # founder is the main recipient
+    founder_is_recipient = founder_in_to or founder_in_cc  # founder is To or Cc
 
     # --- Date patterns ---
     date_patterns = [
@@ -367,12 +374,13 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
         # Use word-boundary matching so "Anthony" doesn't false-match "Anthony's"
         # or "Anthonette" in speaker labels.
         is_founder_speaking = bool(
-            current_speaker
-            and founder_name
-            and re.search(rf"\b{re.escape(founder_name.lower())}\b", current_speaker.lower())
+            (not current_speaker and founder_is_primary)
+            or (
+                current_speaker
+                and founder_name
+                and re.search(rf"\b{re.escape(founder_name.lower())}\b", current_speaker.lower())
+            )
         )
-        founder_is_primary = founder_in_to  # founder is the main recipient
-        founder_is_recipient = founder_in_to or founder_in_cc  # founder is To or Cc
 
         if is_self_commit:
             if is_founder_speaking:
@@ -387,7 +395,7 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
             # If founder is only Cc'd, requests are likely for someone else.
             if founder_is_primary:
                 direction = "user_requested"
-                owner = current_speaker or "unknown"
+                owner = founder_name
             else:
                 # Request directed at someone else, skip
                 continue
