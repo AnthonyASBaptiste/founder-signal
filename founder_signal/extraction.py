@@ -364,7 +364,13 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
             continue
 
         # Determine direction
-        is_founder_speaking = current_speaker and founder_name.lower() in current_speaker.lower()
+        # Use word-boundary matching so "Anthony" doesn't false-match "Anthony's"
+        # or "Anthonette" in speaker labels.
+        is_founder_speaking = bool(
+            current_speaker
+            and founder_name
+            and re.search(rf"\b{re.escape(founder_name.lower())}\b", current_speaker.lower())
+        )
         founder_is_primary = founder_in_to  # founder is the main recipient
         founder_is_recipient = founder_in_to or founder_in_cc  # founder is To or Cc
 

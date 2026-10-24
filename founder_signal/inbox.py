@@ -37,11 +37,7 @@ class InboxWatcher:
 
     def __init__(self, config: Config):
         self.config = config
-        self.inbox_path = Path(
-            os.path.expanduser(
-                os.environ.get("FOUNDER_SIGNAL_INBOX", "~/founder-signal-inbox")
-            )
-        )
+        self.inbox_path = Path(os.path.expanduser(config.inbox_folder))
         self.processed_path = self.inbox_path / "processed"
         self.ledger = open_ledger(config)
 
@@ -49,8 +45,18 @@ class InboxWatcher:
         self.inbox_path.mkdir(parents=True, exist_ok=True)
         self.processed_path.mkdir(parents=True, exist_ok=True)
 
+    # Text extensions that can be read directly for extraction.
+    TEXT_EXTENSIONS = {".txt", ".md"}
+    # Audio extensions recognized as voice notes (need transcription before extraction).
+    AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".aac"}
+
     def scan(self) -> int:
         """Scan the inbox for new files and process them.
+
+        Text files (.txt, .md) are extracted immediately. Audio files
+        (.mp3, .wav, .m4a, .ogg, .aac) are recognized as voice notes and
+        moved to processed with a "transcription needed" note, since they
+        cannot be read as text without a transcription step.
 
         Returns the number of files processed.
         """
@@ -59,9 +65,10 @@ class InboxWatcher:
         for file_path in sorted(self.inbox_path.iterdir()):
             if not file_path.is_file():
                 continue
-            if file_path.suffix.lower() not in (".txt", ".md"):
-                continue
             if file_path.name.endswith(".done"):
+                continue
+            ext = file_path.suffix.lower()
+            if ext not in self.TEXT_EXTENSIONS and ext not in self.AUDIO_EXTENSIONS:
                 continue
             self.process_file(file_path)
             processed += 1
@@ -69,6 +76,18 @@ class InboxWatcher:
 
     def process_file(self, file_path: Path, account: Optional[str] = None) -> None:
         """Process a single inbox file through extraction, reconciliation, briefing."""
+        ext = file_path.suffix.lower()
+
+        # Audio files cannot be read as text; they need transcription first.
+        if ext in self.AUDIO_EXTENSIONS:
+            self._mark_done(file_path)
+            print(
+                f"[founder-signal] {file_path.name}: audio file saved to inbox. "
+                f"Transcription is needed before commitments can be extracted. "
+                f"Add a transcript file or paste the transcript text via the web app."
+            )
+            return
+
         body = file_path.read_text(encoding="utf-8", errors="replace")
         if not body.strip():
             self._mark_done(file_path)

@@ -265,7 +265,10 @@ class MongoLedger(Ledger):
 
     def list_commitments(self, status: Optional[str] = None) -> list[Commitment]:
         query = {} if status is None else {"status": status}
-        cursor = self.commitments.find(query).sort("due_date", 1)
+        # Compound sort: due_date ascending (nulls sort first in MongoDB),
+        # then created_at as a stable tiebreaker. Matches SQLite's
+        # ORDER BY due_date, created_at intent for deterministic ordering.
+        cursor = self.commitments.find(query).sort([("due_date", 1), ("created_at", 1)])
         return [Commitment.from_dict(d) for d in cursor]
 
     def update_commitment(self, commitment: Commitment) -> None:
