@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Founder Signal heartbeat every 15 minutes
+Requires=founder-signal-heartbeat.service
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=founder-signal-heartbeat.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Founder Signal heartbeat (fetch new email via himalaya)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/anthony/Projects/founder-signal/.worktrees/anthonyasbaptiste-ideal-invention
+EnvironmentFile=/home/anthony/Projects/founder-signal/.worktrees/anthonyasbaptiste-ideal-invention/.env
+ExecStart=/usr/bin/python3 -m founder_signal.cli heartbeat --accounts zoho,gmail
+
+[Install]
+WantedBy=multi-user.target

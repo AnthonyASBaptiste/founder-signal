@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem">
+    <div style="display:flex; align-items:center; gap:0.75rem">
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back</a>
+      <h2 style="margin:0; font-size:1.35rem">Ingest Source Material</h2>
+    </div>
+  </div>
+
+  <p style="color:var(--color-text-secondary); font-size:0.95rem; line-height:1.5; margin-bottom:1.5rem">Drop in an email, meeting transcript, or voice note. The Founder Signal extractor parses commitments, detects deadlines and owners, and reconciles them into your ledger.</p>
+
+  <div class="card" style="max-width:800px">
+    <form method="post" enctype="multipart/form-data">
+      <div style="display:grid; grid-template-columns:180px 1fr; gap:1rem; align-items:start; margin-bottom:1.25rem">
+        <div>
+          <label for="field-kind">Ingestion type</label>
+          <select id="field-kind" name="kind">
+            <option value="email">✉️ Email (paste text)</option>
+            <option value="transcript">📄 Meeting transcript (file upload)</option>
+            <option value="voice-note">🎙️ Voice note (audio file upload)</option>
+          </select>
+        </div>
+        <div>
+          <label for="field-title">Title</label>
+          <input id="field-title" type="text" name="title" placeholder="e.g. Accelerator update — Acme" required>
+        </div>
+      </div>
+
+      <!-- Email: paste text -->
+      <div id="input-email" style="display:block">
+        <label for="field-body">Email body</label>
+        <textarea id="field-body" name="body" rows="12" placeholder="Paste the full email text here…" required></textarea>
+      </div>
+
+      <!-- Transcript: file upload -->
+      <div id="input-transcript" style="display:none">
+        <label for="field-file">Transcript file</label>
+        <input id="field-file" type="file" name="file" accept=".txt,.md" required>
+        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload a .txt or .md transcript file. The text will be extracted for commitment analysis.</p>
+      </div>
+
+      <!-- Voice note: audio file upload -->
+      <div id="input-voice-note" style="display:none">
+        <label for="field-file">Audio file</label>
+        <input id="field-file" type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.aac" required>
+        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload an audio file. It will be saved to your inbox folder. Transcription is needed before commitments can be extracted — add a transcript file or paste the transcript text separately.</p>
+      </div>
+
+      <div style="margin-top:1rem; display:flex; align-items:center; gap:0.75rem">
+        <label style="font-size:0.85rem; font-weight:500; margin:0">
+          <input type="checkbox" name="use_llm" value="on" checked> Use LLM extraction (Ollama)
+        </label>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-top:1rem">
+        <button type="submit" class="btn">Extract Commitments</button>
+        <span style="font-size:0.8125rem; color:var(--color-text-secondary)">Safe: commitments are proposed for your confirmation</span>
+      </div>
+    </form>
+  </div>
+
+  <p class="hint-tip">Tip: CLI piping is also supported: <code>cat email.txt | python -m founder_signal.cli --kind email</code></p>
+
+  <script>
+    const kindSelect = document.getElementById('field-kind');
+    const inputs = {
+      email: document.getElementById('input-email'),
+      transcript: document.getElementById('input-transcript'),
+      'voice-note': document.getElementById('input-voice-note'),
+    };
+    const fileInput = document.getElementById('field-file');
+    const bodyInput = document.getElementById('field-body');
+
+    function updateInputs() {
+      const kind = kindSelect.value;
+      Object.values(inputs).forEach(el => el.style.display = 'none');
+      inputs[kind].style.display = 'block';
+      // Toggle required attributes
+      bodyInput.required = kind === 'email';
+      fileInput.required = kind !== 'email';
+    }
+
+    kindSelect.addEventListener('change', updateInputs);
+    updateInputs();
+  </script>
+{% endblock %}

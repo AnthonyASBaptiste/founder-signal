@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem">
+    <div style="display:flex; align-items:center; gap:0.75rem">
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back</a>
+      <h2 style="margin:0; font-size:1.35rem">Edit Commitment</h2>
+    </div>
+    <span class="badge badge-{{ commitment.status }}">{{ commitment.status }}</span>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; align-items:start">
+    <div class="card">
+      <form method="post">
+        <label for="field-description">Description</label>
+        <textarea id="field-description" name="description" rows="3" required>{{ commitment.description }}</textarea>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+          <div>
+            <label for="field-owner">Owner</label>
+            <input type="text" id="field-owner" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
+          </div>
+          <div>
+            <label for="field-due-date">Due date</label>
+            <input type="date" id="field-due-date" name="due_date" value="{{ commitment.due_date or '' }}">
+          </div>
+        </div>
+
+        <label for="field-status">Status</label>
+        <select id="field-status" name="status">
+          <option value="open" {% if commitment.status == 'open' %}selected{% endif %}>Open</option>
+          <option value="done" {% if commitment.status == 'done' %}selected{% endif %}>Done</option>
+          <option value="waiting" {% if commitment.status == 'waiting' %}selected{% endif %}>Waiting</option>
+          <option value="deferred" {% if commitment.status == 'deferred' %}selected{% endif %}>Deferred</option>
+          <option value="ignore" {% if commitment.status == 'ignore' %}selected{% endif %}>Ignore</option>
+        </select>
+
+        <label for="field-evidence">Evidence (verbatim quote from source)</label>
+        <textarea id="field-evidence" name="evidence" rows="4">{{ commitment.evidence }}</textarea>
+
+        <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
+
+        <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap">
+          <button type="submit" name="action" value="update" class="btn">Save Changes</button>
+          <button type="submit" name="action" value="confirm" class="btn btn-outline">Confirm (No Change)</button>
+        </div>
+      </form>
+    </div>
+
+    {% if source %}
+    <div class="card" style="border-left:3px solid var(--color-accent)">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem">
+        <h3 style="margin:0; font-size:1rem">{{ source.title }}</h3>
+        <span class="source-chip">{{ source.kind }}</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--color-text-secondary); margin-bottom:0.75rem; word-break:break-all">
+        <code>{{ commitment.source_id }}</code>
+      </div>
+      <p style="white-space:pre-wrap; font-size:0.875rem; color:var(--color-text); border-top:1px solid var(--color-border); padding-top:0.75rem; line-height:1.55; margin:0; background:var(--color-bg); padding:0.85rem; border-radius:var(--radius-sm)">{{ source.body[:600] }}{% if source.body|length > 600 %}…{% endif %}</p>
+    </div>
+    {% endif %}
+  </div>
+{% endblock %}
