@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Any
 
 from .ledger import Ledger
 from .models import Commitment
@@ -41,15 +41,29 @@ def _is_coming_up(commitment: Commitment, within_days: int = 7) -> bool:
     return today < due <= today + timedelta(days=within_days)
 
 
-def generate_briefing(ledger: Ledger, coming_up_days: int = 7) -> Briefing:
+def generate_briefing(
+    ledger: Ledger,
+    coming_up_days: int = 7,
+    config: Optional[Any] = None,
+    founder_name: Optional[str] = None,
+) -> Briefing:
     """Generate the morning briefing from the ledger.
 
     Sections:
     - Do now: overdue or due today, open commitments.
     - Coming up: due within `coming_up_days`, open.
-    - Waiting on: open commitments with an owner other than "me"/"I" (delegated).
+    - Waiting on: open commitments with an owner other than "me"/"I"/founder (delegated).
     - Needs clarification: open commitments missing owner or due date.
     """
+    if config is None:
+        try:
+            from .config import Config
+            config = Config.from_env()
+        except Exception:
+            config = None
+
+    fname = (founder_name or (getattr(config, "founder_name", None) or "")).strip().lower()
+
     all_open = ledger.list_commitments(status="open")
     briefing = Briefing()
 
@@ -60,7 +74,10 @@ def generate_briefing(ledger: Ledger, coming_up_days: int = 7) -> Briefing:
             briefing.coming_up.append(c)
 
         owner = (c.owner or "").strip().lower()
-        if owner and owner not in ("me", "i", "myself", "founder"):
+        is_founder = owner in ("me", "i", "myself", "founder") or (
+            bool(fname) and (owner == fname or fname in owner or owner in fname)
+        )
+        if owner and not is_founder:
             briefing.waiting_on.append(c)
 
         if not c.owner or not c.due_date:
