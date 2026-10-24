@@ -244,14 +244,61 @@ def _parse_llm_json(raw: str) -> ExtractionResult | None:
     )
 
 
-def _rule_based_extract(source: Source) -> ExtractionResult:
-    """Deterministic fallback extractor (no LLM required)."""
+def _rule_based_extract(source: Source, config: Optional[Config] = None) -> ExtractionResult:
+    """Deterministic fallback extractor (no LLM required).
+
+    Filters out quoted email lines and headers, identifies the founder from
+    To:/Cc: headers or speaker labels, and only extracts commitments directed
+    at or made by the founder.
+    """
+    from .config import Config
+
+    cfg = config or Config.from_env()
+    founder_name = cfg.founder_name
+    founder_email = cfg.founder_email
+
     body = source.body
     commitments: list[ExtractedCommitment] = []
     decisions: list[str] = []
     follow_ups: list[str] = []
 
-    # Date patterns
+    # --- Pre-process: strip email headers and quoted lines ---
+    lines = body.splitlines()
+    cleaned: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Skip quoted email lines (start with >)
+        if stripped.startswith(">"):
+            continue
+        # Skip email header lines (From:, To:, Cc:, Subject:, Date:, etc.)
+        # These can appear at the top or in forwarded message chains.
+        if re.match(r"^(From|To|Cc|Bcc|Subject|Date|Message-ID|Content-Type|Content-Transfer-Encoding|X-|Received|Reply-To):\s", stripped, re.IGNORECASE):
+            continue
+        # Skip signature blocks and separators
+        if stripped.startswith("-- ") or stripped.startswith("*"):
+            continue
+        cleaned.append(stripped)
+
+    # --- Identify the founder from headers ---
+    founder_in_to = False
+    founder_in_cc = False
+    for line in body.splitlines():
+        low = line.lower()
+        if low.startswith("to:") or low.startswith("cc:"):
+            if founder_name.lower() in low:
+                if low.startswith("to:"):
+                    founder_in_to = True
+                else:
+                    founder_in_cc = True
+            if founder_email and founder_email.lower() in low:
+                if low.startswith("to:"):
+                    founder_in_to = True
+                else:
+                    founder_in_cc = True
+
+    # --- Date patterns ---
     date_patterns = [
         r"\b(\d{4}-\d{2}-\d{2})\b",
         r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b",
@@ -259,46 +306,120 @@ def _rule_based_extract(source: Source) -> ExtractionResult:
         r"\b(tomorrow|next week|by end of day|eod|by friday)\b",
     ]
 
-    # Commitment cues
-    commitment_cues = [
+    # --- Decision and follow-up cues ---
+    decision_cues = [
+        r"\bwe decided\b", r"\bdecision\b", r"\bwe agreed\b", r"\bagreed to\b",
+        r"\bgoing with\b", r"\bwe've decided\b", r"\bwe have decided\b",
+    ]
+    followup_cues = [
+        r"\bfollow up\b", r"\bfollow-up\b", r"\bcheck in\b", r"\bcheck-in\b",
+        r"\bcircle back\b", r"\btouch base\b",
+    ]
+    # Patterns where the speaker is committing themselves (user_committing if speaker is founder)
+    self_commit_cues = [
         r"\bi will\s+(.+)",
         r"\bi'll\s+(.+)",
-        r"\bwe will\s+(.+)",
-        r"\bwe'll\s+(.+)",
         r"\bi promise\s+to\s+(.+)",
         r"\bi commit\s+to\s+(.+)",
+        r"\bwe will\s+(.+)",
+        r"\bwe'll\s+(.+)",
+    ]
+    # Patterns where someone is asking the speaker to do something (user_requested if addressed to founder)
+    request_cues = [
         r"\bplease\s+(.+)",
         r"\bcan you\s+(.+)",
         r"\bcould you\s+(.+)",
+        r"\bwould you\s+(.+)",
     ]
 
-    for line in body.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        low = line.lower()
-        is_commitment = any(re.search(c, low) for c in commitment_cues)
-        is_decision = any(k in low for k in ["decided", "decision", "we agreed", "agreed to", "going with"])
-        is_followup = any(k in low for k in ["follow up", "follow-up", "check in", "check-in", "circle back", "touch base"])
+    # Track current speaker for transcripts (lines like "Name: text")
+    current_speaker = None
+    speaker_pattern = re.compile(r"^([A-Za-z][A-Za-z\s'’\-]+?):\s(.+)$")
 
+    for line in cleaned:
+        low = line.lower()
+
+        # Detect speaker label in transcripts
+        m = speaker_pattern.match(line)
+        if m:
+            current_speaker = m.group(1).strip()
+            line = m.group(2)
+            low = line.lower()
+
+        is_self_commit = any(re.search(c, low) for c in self_commit_cues)
+        is_request = any(re.search(c, low) for c in request_cues)
+        is_decision = any(re.search(c, low) for c in decision_cues)
+        is_followup = any(re.search(c, low) for c in followup_cues)
+
+        if not is_self_commit and not is_request and not is_decision and not is_followup:
+            continue
+
+        if is_decision:
+            decisions.append(line)
+        if is_followup:
+            follow_ups.append(line)
+
+        if not is_self_commit and not is_request:
+            continue
+
+        # Determine direction
+        is_founder_speaking = current_speaker and founder_name.lower() in current_speaker.lower()
+        founder_is_primary = founder_in_to  # founder is the main recipient
+        founder_is_recipient = founder_in_to or founder_in_cc  # founder is To or Cc
+
+        if is_self_commit:
+            if is_founder_speaking:
+                direction = "user_committing"
+                owner = founder_name
+            else:
+                # Someone else committing - only relevant if for the founder
+                direction = "third_party"
+                owner = current_speaker
+        elif is_request:
+            # Only treat as user_requested if founder is the primary recipient (To:).
+            # If founder is only Cc'd, requests are likely for someone else.
+            if founder_is_primary:
+                direction = "user_requested"
+                owner = current_speaker or "unknown"
+            else:
+                # Request directed at someone else, skip
+                continue
+
+        # Extract due date from the line
         due_date = None
         for pat in date_patterns:
             m = re.search(pat, low)
             if m:
                 due_date = m.group(0)
+                # Normalize explicit dates to YYYY-MM-DD
+                date_m = re.search(r"(\d{4}-\d{2}-\d{2})", due_date)
+                if date_m:
+                    due_date = date_m.group(1)
                 break
 
-        if is_commitment:
-            commitments.append(ExtractedCommitment(
-                description=line,
-                evidence=line,
-                due_date=due_date,
-                confidence=0.6,
-            ))
-        if is_decision:
-            decisions.append(line)
-        if is_followup:
-            follow_ups.append(line)
+        # Apply due date inference when no explicit date
+        suggested_due_date = None
+        if not due_date:
+            suggested_due_date = _infer_due_date(None, line)
+
+        # Extract description (the commitment part after the cue)
+        description = line
+        for cue_list in (self_commit_cues, request_cues):
+            for cue in cue_list:
+                m = re.search(cue, low)
+                if m:
+                    description = m.group(1).strip()
+                    break
+
+        commitments.append(ExtractedCommitment(
+            description=description,
+            owner=owner,
+            due_date=due_date,
+            suggested_due_date=suggested_due_date,
+            direction=direction,
+            evidence=line,
+            confidence=0.6,
+        ))
 
     summary = f"Extracted {len(commitments)} commitment(s), {len(decisions)} decision(s), {len(follow_ups)} follow-up(s) from {source.kind} '{source.title}'."
     return ExtractionResult(
@@ -371,7 +492,7 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
     Returns:
         ExtractionResult with proposed commitments, decisions, follow-ups.
     """
-    result = _rule_based_extract(source)
+    result = _rule_based_extract(source, config)
     result.source = source
 
     if not use_llm:

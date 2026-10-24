@@ -23,6 +23,8 @@ class Config:
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "gemma4:e2b-it-qat"
     use_llm: bool = False
+    founder_name: str = "Anthony"
+    founder_email: str | None = None
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -44,4 +46,6 @@ class Config:
             or "gemma4:e2b-it-qat",
             use_llm=(_getenv("FOUNDER_SIGNAL_USE_LLM", "false") or "false").lower()
             == "true",
+            founder_name=_getenv("FOUNDER_NAME", "Anthony") or "Anthony",
+            founder_email=_getenv("FOUNDER_EMAIL"),
         )
