@@ -67,7 +67,7 @@ class InboxWatcher:
             processed += 1
         return processed
 
-    def process_file(self, file_path: Path) -> None:
+    def process_file(self, file_path: Path, account: Optional[str] = None) -> None:
         """Process a single inbox file through extraction, reconciliation, briefing."""
         body = file_path.read_text(encoding="utf-8", errors="replace")
         if not body.strip():
@@ -82,8 +82,8 @@ class InboxWatcher:
         # Persist source.
         self.ledger.add_source(source)
 
-        # Run the Founder Signal skill (extraction).
-        result = extract(source, use_llm=self.config.use_llm, config=self.config)
+        # Run the Founder Signal skill (extraction) with per-account founder identity.
+        result = extract(source, use_llm=self.config.use_llm, config=self.config, account=account)
 
         # Convert to proposed commitments and reconcile.
         proposed = to_commitments(result, source.id)
@@ -183,6 +183,9 @@ class InboxWatcher:
                     if body:
                         self._write_email_to_inbox(account, str(msg_id), body)
                         fetched += 1
+                        # Process immediately with per-account founder identity.
+                        file_path = self.inbox_path / file_name
+                        self.process_file(file_path, account=account)
             except subprocess.TimeoutExpired:
                 print(f"[founder-signal] himalaya timed out for {account}", file=sys.stderr)
             except Exception as exc:  # noqa: BLE001
@@ -386,9 +389,7 @@ def run_heartbeat(config: Config, accounts: Optional[list[str]] = None) -> None:
     watcher = InboxWatcher(config)
     try:
         fetched = watcher.heartbeat_email(accounts)
-        # After fetching, process any new inbox files.
-        count = watcher.scan()
-        print(f"[founder-signal] Heartbeat complete: {fetched} email(s) fetched, {count} file(s) processed.")
+        print(f"[founder-signal] Heartbeat complete: {fetched} email(s) fetched and processed.")
     finally:
         watcher.close()
 

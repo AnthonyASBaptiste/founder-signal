@@ -26,6 +26,20 @@ class Config:
     founder_name: str = "Anthony"
     founder_email: str | None = None
 
+    def founder_for_account(self, account: str | None) -> tuple[str, str | None]:
+        """Return (founder_name, founder_email) for a given himalaya account.
+
+        Looks up FOUNDER_NAME_<ACCOUNT> and FOUNDER_EMAIL_<ACCOUNT> env vars,
+        falling back to the global FOUNDER_NAME / FOUNDER_EMAIL.
+        """
+        if account:
+            key = account.upper().replace("-", "_").replace(".", "_")
+            name = os.environ.get(f"FOUNDER_NAME_{key}")
+            email = os.environ.get(f"FOUNDER_EMAIL_{key}")
+            if name or email:
+                return (name or self.founder_name, email or self.founder_email)
+        return (self.founder_name, self.founder_email)
+
     @classmethod
     def from_env(cls) -> "Config":
         return cls(

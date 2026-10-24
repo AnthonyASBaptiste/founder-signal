@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
+from .config import Config
 from .models import Commitment, Source
 
 
@@ -244,18 +245,18 @@ def _parse_llm_json(raw: str) -> ExtractionResult | None:
     )
 
 
-def _rule_based_extract(source: Source, config: Optional[Config] = None) -> ExtractionResult:
+def _rule_based_extract(source: Source, config: Optional[Config] = None,
+                        founder_name: Optional[str] = None,
+                        founder_email: Optional[str] = None) -> ExtractionResult:
     """Deterministic fallback extractor (no LLM required).
 
     Filters out quoted email lines and headers, identifies the founder from
     To:/Cc: headers or speaker labels, and only extracts commitments directed
     at or made by the founder.
     """
-    from .config import Config
-
     cfg = config or Config.from_env()
-    founder_name = cfg.founder_name
-    founder_email = cfg.founder_email
+    founder_name = founder_name or cfg.founder_name
+    founder_email = founder_email or cfg.founder_email
 
     body = source.body
     commitments: list[ExtractedCommitment] = []
@@ -432,7 +433,8 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None) -> Extr
     )
 
 
-def _ollama_extract(source: Source, host: str, model: str) -> ExtractionResult | None:
+def _ollama_extract(source: Source, host: str, model: str, config: Optional[Config] = None,
+                    founder_name: Optional[str] = None, founder_email: Optional[str] = None) -> ExtractionResult | None:
     """Run extraction via a local Ollama chat endpoint.
 
     Returns an ExtractionResult on success, or None on failure so the caller
@@ -440,10 +442,16 @@ def _ollama_extract(source: Source, host: str, model: str) -> ExtractionResult |
     """
     import urllib.request
 
+    cfg = config or Config.from_env()
+    founder_name = founder_name or cfg.founder_name
+    founder_email = founder_email or cfg.founder_email
+
+    system_prompt = SKILL_SYSTEM_PROMPT + f"\n\nThe founder/recipient is: {founder_name}" + (f" ({founder_email})" if founder_email else "") + "."
+
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": SKILL_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Source kind: {source.kind}\nTitle: {source.title}\nBody:\n{source.body}"},
         ],
         "stream": False,
@@ -480,7 +488,8 @@ def _ollama_extract(source: Source, host: str, model: str) -> ExtractionResult |
     return None
 
 
-def extract(source: Source, use_llm: bool = False, config: Optional[Config] = None) -> ExtractionResult:
+def extract(source: Source, use_llm: bool = False, config: Optional[Config] = None,
+            account: Optional[str] = None) -> ExtractionResult:
     """Run the Founder Signal extraction skill on a source.
 
     Args:
@@ -488,49 +497,53 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
         use_llm: If True and an LLM provider is available, use the LLM;
             otherwise use the deterministic rule-based extractor.
         config: Optional Config for Ollama host/model settings.
+        account: Optional himalaya account name for per-account founder identity.
 
     Returns:
         ExtractionResult with proposed commitments, decisions, follow-ups.
     """
-    result = _rule_based_extract(source, config)
-    result.source = source
+    cfg = config or Config.from_env()
 
-    if not use_llm:
-        return result
+    # Resolve founder identity for this account (per-account override or global).
+    founder_name, founder_email = cfg.founder_for_account(account)
 
-    # Try OpenAI first if an API key is present.
-    if os.environ.get("OPENAI_API_KEY"):
+    # LLM is the primary path when requested (privacy-first via Ollama).
+    if use_llm:
+        # Try local Ollama first (no API key needed, runs locally).
         try:
-            from openai import OpenAI
-            client = OpenAI()
-            completion = client.chat.completions.create(
-                model=os.environ.get("FOUNDER_SIGNAL_MODEL", "gpt-4o-mini"),
-                messages=[
-                    {"role": "system", "content": SKILL_SYSTEM_PROMPT},
-                    {"role": "user", "content": f"Source kind: {source.kind}\nTitle: {source.title}\nBody:\n{source.body}"},
-                ],
-                temperature=0.2,
-                response_format={"type": "json_object"},
-            )
-            raw = completion.choices[0].message.content or ""
-            parsed = _parse_llm_json(raw)
-            if parsed is not None:
-                parsed.source = source
-                parsed.raw = raw
-                return parsed
+            ollama_result = _ollama_extract(source, cfg.ollama_host, cfg.ollama_model, cfg, founder_name, founder_email)
+            if ollama_result is not None:
+                return ollama_result
         except Exception:
-            # Fall through to Ollama or rule-based.
             pass
 
-    # Try local Ollama (privacy-first, no API key needed).
-    cfg = config or Config.from_env()
-    try:
-        ollama_result = _ollama_extract(source, cfg.ollama_host, cfg.ollama_model)
-        if ollama_result is not None:
-            return ollama_result
-    except Exception:
-        pass
+        # Try OpenAI if an API key is present.
+        if os.environ.get("OPENAI_API_KEY"):
+            try:
+                from openai import OpenAI
+                client = OpenAI()
+                system_prompt = SKILL_SYSTEM_PROMPT + f"\n\nThe founder/recipient is: {founder_name}" + (f" ({founder_email})" if founder_email else "") + "."
+                completion = client.chat.completions.create(
+                    model=os.environ.get("FOUNDER_SIGNAL_MODEL", "gpt-4o-mini"),
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"Source kind: {source.kind}\nTitle: {source.title}\nBody:\n{source.body}"},
+                    ],
+                    temperature=0.2,
+                    response_format={"type": "json_object"},
+                )
+                raw = completion.choices[0].message.content or ""
+                parsed = _parse_llm_json(raw)
+                if parsed is not None:
+                    parsed.source = source
+                    parsed.raw = raw
+                    return parsed
+            except Exception:
+                pass
 
+    # Deterministic rule-based fallback (works offline, no API key).
+    result = _rule_based_extract(source, cfg, founder_name, founder_email)
+    result.source = source
     return result
 
 
