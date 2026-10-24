@@ -196,7 +196,11 @@ class InboxWatcher:
                         c if c.isalnum() or c in "-_" else "_" for c in str(msg_id)
                     )
                     file_name = f"email-{account}-{safe_id}.txt"
-                    if (self.inbox_path / file_name).exists():
+                    if (
+                        (self.inbox_path / file_name).exists()
+                        or (self.processed_path / file_name).exists()
+                        or (self.inbox_path / f"{file_name}.done").exists()
+                    ):
                         continue
                     body = self._fetch_message_body(account, str(msg_id))
                     if body:
