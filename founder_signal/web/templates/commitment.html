@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.75rem">
     <div style="display:flex; align-items:center; gap:0.75rem">
-      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back</a>
-      <h2 style="margin:0; font-size:1.35rem">Edit Commitment</h2>
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back to Cockpit</a>
+      <h2 class="section-title" style="margin:0">Edit Commitment</h2>
     </div>
     <span class="badge badge-{{ commitment.status }}">{{ commitment.status }}</span>
   </div>
 
-  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; align-items:start">
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.75rem; align-items:start">
     <div class="card">
       <form method="post">
         <label for="field-description">Description</label>
         <textarea id="field-description" name="description" rows="3" required>{{ commitment.description }}</textarea>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem">
           <div>
             <label for="field-owner">Owner</label>
             <input type="text" id="field-owner" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
@@ -40,7 +40,7 @@
 
         <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
 
-        <div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap">
+        <div style="display:flex; gap:0.65rem; margin-top:0.75rem; flex-wrap:wrap">
           <button type="submit" name="action" value="update" class="btn">Save Changes</button>
           <button type="submit" name="action" value="confirm" class="btn btn-outline">Confirm (No Change)</button>
         </div>
@@ -48,16 +48,17 @@
     </div>
 
     {% if source %}
-    <div class="card" style="border-left:3px solid var(--color-accent)">
+    <aside class="source-preview-card" aria-label="Original Source Verification">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem">
-        <h3 style="margin:0; font-size:1rem">{{ source.title }}</h3>
+        <h3 style="margin:0; font-family:var(--font-serif); font-size:1.15rem; color:var(--color-text)">{{ source.title }}</h3>
         <span class="source-chip">{{ source.kind }}</span>
       </div>
       <div style="font-size:0.75rem; color:var(--color-text-secondary); margin-bottom:0.75rem; word-break:break-all">
-        <code>{{ commitment.source_id }}</code>
+        <code style="font-family:var(--font-mono)">{{ commitment.source_id }}</code>
       </div>
-      <p style="white-space:pre-wrap; font-size:0.875rem; color:var(--color-text); border-top:1px solid var(--color-border); padding-top:0.75rem; line-height:1.55; margin:0; background:var(--color-bg); padding:0.85rem; border-radius:var(--radius-sm)">{{ source.body[:600] }}{% if source.body|length > 600 %}…{% endif %}</p>
-    </div>
+      <div class="source-preview-body">{{ source.body[:700] }}{% if source.body|length > 700 %}…{% endif %}</div>
+    </aside>
     {% endif %}
   </div>
 {% endblock %}
+

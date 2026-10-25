@@ -1,45 +1,61 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h2 style="margin-top:0">Morning Briefing</h2>
-  <p style="color:var(--color-text-secondary); font-size:0.95rem; margin-bottom:1.5rem">Generated {{ briefing.generated_at.strftime('%Y-%m-%d %H:%M') }} · {{ briefing.summary }}</p>
+  <div style="margin-bottom:1.75rem">
+    <h2 class="page-title">Morning Briefing</h2>
+    <p class="page-subtitle">Generated {{ briefing.generated_at.strftime('%Y-%m-%d %H:%M') }} · {{ briefing.summary }}</p>
+  </div>
 
   {% if not briefing.do_now and not briefing.coming_up and not briefing.waiting_on and not briefing.needs_clarification %}
-    <div class="empty-state" style="text-align:center; padding:3rem 1rem; background:var(--color-surface); border:1px solid var(--color-border); border-radius:12px; margin-bottom:1.5rem">
-      <h2 style="color:var(--color-success); margin:0 0 0.5rem 0">🎉 Congrats, you're caught up</h2>
-      <p style="color:var(--color-text-secondary); margin:0">No open commitments. Everything is under control.</p>
+    <div class="deck-clear-card">
+      <div class="deck-clear-emblem" aria-hidden="true">✦</div>
+      <h3 class="deck-clear-title">The deck is clear</h3>
+      <p class="deck-clear-desc">No overdue commitments, upcoming deadlines, or pending delegations. Everything in your cockpit is under control.</p>
+      <div style="margin-top:1.25rem">
+        <a href="{{ url_for('index') }}" class="btn btn-outline">← Return to Cockpit</a>
+      </div>
     </div>
   {% endif %}
 
   <div class="grid-briefing">
-    <div class="card">
-      <h2>Do now</h2>
+    <!-- Do Now Lane (Hero Emphasis) -->
+    <div class="lane-card lane-card-do-now">
+      <div class="lane-header">
+        <div class="lane-header-left">
+          <span class="lane-icon" aria-hidden="true">⚡</span>
+          <h3 class="lane-title">Do Now</h3>
+        </div>
+        <span class="lane-count">{{ briefing.do_now|length }}</span>
+      </div>
       {% if briefing.do_now %}
         <ul class="briefing-list">
           {% for c in briefing.do_now %}
             <li class="briefing-item">
-              <div style="font-weight:600; font-size:0.95rem; line-height:1.4">{{ c.description }}</div>
+              <div class="briefing-item-desc">{{ c.description }}</div>
               <div class="briefing-item-meta">
-                <span class="badge badge-{{ c.status }}">{{ c.status }}</span> · due {{ c.due_date or '—' }}
+                <span class="due-pill due-pill-urgent">Due {{ c.due_date or 'today' }}</span>
+                {% if c.owner %} · <span style="font-weight:500">{{ c.owner }}</span>{% endif %}
               </div>
               {% if c.evidence %}
-                <details class="evidence-disclosure">
-                  <summary><span>Source Quote</span></summary>
-                  <blockquote>{{ c.evidence }}</blockquote>
-                </details>
+                <div class="evidence-block">
+                  <details class="evidence-disclosure">
+                    <summary><span>“ Source Quote</span></summary>
+                    <blockquote>{{ c.evidence }}</blockquote>
+                  </details>
+                </div>
               {% endif %}
               <div class="briefing-actions">
-                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-view" aria-label="Edit commitment">Edit</a>
                 {% if c.status == 'open' %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="done">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="ignore">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
+                    <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                   </form>
                 {% elif c.status in ('done', 'ignore') %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
@@ -47,6 +63,7 @@
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                 {% endif %}
               </div>
             </li>
@@ -57,34 +74,44 @@
       {% endif %}
     </div>
 
-    <div class="card">
-      <h2>Coming up</h2>
+    <!-- Coming Up Lane -->
+    <div class="lane-card lane-card-coming-up">
+      <div class="lane-header">
+        <div class="lane-header-left">
+          <span class="lane-icon" aria-hidden="true">🗓️</span>
+          <h3 class="lane-title">Coming Up</h3>
+        </div>
+        <span class="lane-count">{{ briefing.coming_up|length }}</span>
+      </div>
       {% if briefing.coming_up %}
         <ul class="briefing-list">
           {% for c in briefing.coming_up %}
             <li class="briefing-item">
-              <div style="font-weight:600; font-size:0.95rem; line-height:1.4">{{ c.description }}</div>
+              <div class="briefing-item-desc">{{ c.description }}</div>
               <div class="briefing-item-meta">
-                <span class="badge badge-{{ c.status }}">{{ c.status }}</span> · due {{ c.due_date }}
+                <span class="due-pill">Due {{ c.due_date }}</span>
+                {% if c.owner %} · <span style="font-weight:500">{{ c.owner }}</span>{% endif %}
               </div>
               {% if c.evidence %}
-                <details class="evidence-disclosure">
-                  <summary><span>Source Quote</span></summary>
-                  <blockquote>{{ c.evidence }}</blockquote>
-                </details>
+                <div class="evidence-block">
+                  <details class="evidence-disclosure">
+                    <summary><span>“ Source Quote</span></summary>
+                    <blockquote>{{ c.evidence }}</blockquote>
+                  </details>
+                </div>
               {% endif %}
               <div class="briefing-actions">
-                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-view" aria-label="Edit commitment">Edit</a>
                 {% if c.status == 'open' %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="done">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="ignore">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
+                    <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                   </form>
                 {% elif c.status in ('done', 'ignore') %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
@@ -92,44 +119,54 @@
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                 {% endif %}
               </div>
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <p class="empty">Nothing coming up.</p>
+        <p class="empty">Nothing coming up in the near window.</p>
       {% endif %}
     </div>
 
-    <div class="card">
-      <h2>Waiting on someone</h2>
+    <!-- Waiting On Someone Lane -->
+    <div class="lane-card lane-card-waiting">
+      <div class="lane-header">
+        <div class="lane-header-left">
+          <span class="lane-icon" aria-hidden="true">⏳</span>
+          <h3 class="lane-title">Waiting On Someone</h3>
+        </div>
+        <span class="lane-count">{{ briefing.waiting_on|length }}</span>
+      </div>
       {% if briefing.waiting_on %}
         <ul class="briefing-list">
           {% for c in briefing.waiting_on %}
             <li class="briefing-item">
-              <div style="font-weight:600; font-size:0.95rem; line-height:1.4">{{ c.description }}</div>
+              <div class="briefing-item-desc">{{ c.description }}</div>
               <div class="briefing-item-meta">
-                <span class="badge badge-{{ c.status }}">{{ c.status }}</span> · owner {{ c.owner }} · due {{ c.due_date or '—' }}
+                Delegated to <strong style="color:var(--color-text)">{{ c.owner }}</strong> · due {{ c.due_date or '—' }}
               </div>
               {% if c.evidence %}
-                <details class="evidence-disclosure">
-                  <summary><span>Source Quote</span></summary>
-                  <blockquote>{{ c.evidence }}</blockquote>
-                </details>
+                <div class="evidence-block">
+                  <details class="evidence-disclosure">
+                    <summary><span>“ Source Quote</span></summary>
+                    <blockquote>{{ c.evidence }}</blockquote>
+                  </details>
+                </div>
               {% endif %}
               <div class="briefing-actions">
-                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-view" aria-label="Edit commitment">Edit</a>
                 {% if c.status == 'open' %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="done">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="ignore">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
+                    <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                   </form>
                 {% elif c.status in ('done', 'ignore') %}
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
@@ -137,50 +174,49 @@
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
                     <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                   </form>
+                  <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
                 {% endif %}
               </div>
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <p class="empty">Nothing waiting on someone.</p>
+        <p class="empty">No active delegations pending.</p>
       {% endif %}
     </div>
 
-    <div class="card">
-      <h2>Needs clarification</h2>
+    <!-- Needs Clarification Lane -->
+    <div class="lane-card lane-card-clarification">
+      <div class="lane-header">
+        <div class="lane-header-left">
+          <span class="lane-icon" aria-hidden="true">🔍</span>
+          <h3 class="lane-title">Needs Clarification</h3>
+        </div>
+        <span class="lane-count">{{ briefing.needs_clarification|length }}</span>
+      </div>
       {% if briefing.needs_clarification %}
         <ul class="briefing-list">
           {% for c in briefing.needs_clarification %}
             <li class="briefing-item">
-              <div style="font-weight:600; font-size:0.95rem; line-height:1.4">{{ c.description }}</div>
-              <div class="briefing-item-meta">
-                missing: {% if not c.owner %}<strong style="color:var(--color-text)">owner</strong>{% endif %}{% if not c.owner and not c.due_date %}, {% endif %}{% if not c.due_date %}<strong style="color:var(--color-text)">due date</strong>{% endif %}
+              <div class="briefing-item-desc">{{ c.description }}</div>
+              <div class="briefing-item-meta" style="color:var(--color-urgent)">
+                Missing: {% if not c.owner %}<strong style="color:var(--color-urgent)">owner</strong>{% endif %}{% if not c.owner and not c.due_date %}, {% endif %}{% if not c.due_date %}<strong style="color:var(--color-urgent)">due date</strong>{% endif %}
               </div>
               {% if c.evidence %}
-                <details class="evidence-disclosure">
-                  <summary><span>Source Quote</span></summary>
-                  <blockquote>{{ c.evidence }}</blockquote>
-                </details>
+                <div class="evidence-block">
+                  <details class="evidence-disclosure">
+                    <summary><span>“ Source Quote</span></summary>
+                    <blockquote>{{ c.evidence }}</blockquote>
+                  </details>
+                </div>
               {% endif %}
               <div class="briefing-actions">
-                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-view" aria-label="Edit commitment">Edit</a>
+                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-done" aria-label="Clarify commitment: {{ c.description }}">Clarify Details</a>
                 {% if c.status == 'open' %}
-                  <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                    <input type="hidden" name="status" value="done">
-                    <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
-                  </form>
                   <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                     <input type="hidden" name="status" value="ignore">
                     <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-ignore" aria-label="Ignore '{{ c.description }}'">Ignore</button>
-                  </form>
-                {% elif c.status in ('done', 'ignore') %}
-                  <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                    <input type="hidden" name="status" value="open">
-                    <input type="hidden" name="next" value="{{ url_for('briefing_view') }}">
-                    <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
+                    <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                   </form>
                 {% endif %}
               </div>
@@ -188,10 +224,13 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="empty">Everything is clear.</p>
+        <p class="empty">All commitments have owners and deadlines.</p>
       {% endif %}
     </div>
   </div>
 
-  <p><a href="{{ url_for('index') }}" class="btn btn-outline">← Back to dashboard</a></p>
+  <div>
+    <a href="{{ url_for('index') }}" class="btn btn-outline">← Back to Cockpit</a>
+  </div>
 {% endblock %}
+

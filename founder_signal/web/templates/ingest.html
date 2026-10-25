@@ -1,61 +1,60 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem">
-    <div style="display:flex; align-items:center; gap:0.75rem">
-      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back</a>
-      <h2 style="margin:0; font-size:1.35rem">Ingest Source Material</h2>
+  <div style="margin-bottom:1.75rem">
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem">
+      <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">← Back to Cockpit</a>
     </div>
+    <h2 class="page-title">Ingest Source Material</h2>
+    <p class="page-subtitle">Drop in an email, meeting transcript, or voice note. The Founder Signal extractor parses commitments, detects deadlines and owners, and reconciles them into your ledger.</p>
   </div>
 
-  <p style="color:var(--color-text-secondary); font-size:0.95rem; line-height:1.5; margin-bottom:1.5rem">Drop in an email, meeting transcript, or voice note. The Founder Signal extractor parses commitments, detects deadlines and owners, and reconciles them into your ledger.</p>
-
-  <div class="card" style="max-width:800px">
+  <div class="card" style="max-width:820px">
     <form method="post" enctype="multipart/form-data">
-      <div style="display:grid; grid-template-columns:180px 1fr; gap:1rem; align-items:start; margin-bottom:1.25rem">
+      <div style="display:grid; grid-template-columns:190px 1fr; gap:1.25rem; align-items:start; margin-bottom:1.25rem">
         <div>
-          <label for="field-kind">Ingestion type</label>
+          <label for="field-kind">Ingestion Type</label>
           <select id="field-kind" name="kind">
             <option value="email">✉️ Email (paste text)</option>
-            <option value="transcript">📄 Meeting transcript (file upload)</option>
-            <option value="voice-note">🎙️ Voice note (audio file upload)</option>
+            <option value="transcript">📄 Transcript (file upload)</option>
+            <option value="voice-note">🎙️ Voice note (audio file)</option>
           </select>
         </div>
         <div>
-          <label for="field-title">Title</label>
+          <label for="field-title">Source Title</label>
           <input id="field-title" type="text" name="title" placeholder="e.g. Accelerator update — Acme" required>
         </div>
       </div>
 
       <!-- Email: paste text -->
       <div id="input-email" style="display:block">
-        <label for="field-body">Email body</label>
+        <label for="field-body">Email Body</label>
         <textarea id="field-body" name="body" rows="12" placeholder="Paste the full email text here…" required></textarea>
       </div>
 
       <!-- Transcript: file upload -->
       <div id="input-transcript" style="display:none">
-        <label for="field-file-transcript">Transcript file</label>
+        <label for="field-file-transcript">Transcript File</label>
         <input id="field-file-transcript" type="file" name="file" accept=".txt,.md">
-        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload a .txt or .md transcript file. The text will be extracted for commitment analysis.</p>
+        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload a .txt or .md transcript file. Text will be analyzed for commitment extraction.</p>
       </div>
 
       <!-- Voice note: audio file upload -->
       <div id="input-voice-note" style="display:none">
-        <label for="field-file-audio">Audio file</label>
+        <label for="field-file-audio">Audio File</label>
         <input id="field-file-audio" type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.aac">
-        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload an audio file. It will be saved to your inbox folder. Transcription is needed before commitments can be extracted — add a transcript file or paste the transcript text separately.</p>
+        <p style="font-size:0.8125rem; color:var(--color-text-secondary); margin-top:0.25rem">Upload an audio recording (.mp3, .wav, .m4a). It will be stored in your inbox for transcription and subsequent commitment extraction.</p>
       </div>
 
-      <div style="margin-top:1rem; display:flex; align-items:center; gap:0.75rem">
-        <label style="font-size:0.85rem; font-weight:500; margin:0">
-          <input type="checkbox" name="use_llm" value="on" checked> Use LLM extraction (Ollama)
+      <div style="margin:1.25rem 0 1.5rem 0; display:flex; align-items:center; gap:0.75rem">
+        <label style="font-size:0.875rem; font-weight:500; margin:0; text-transform:none; letter-spacing:normal; color:var(--color-text); cursor:pointer">
+          <input type="checkbox" name="use_llm" value="on" checked style="width:auto; margin:0 0.4rem 0 0"> Use LLM extraction (Ollama)
         </label>
       </div>
 
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-top:1rem">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; padding-top:1rem; border-top:1px solid var(--color-border-subtle)">
         <button type="submit" class="btn">Extract Commitments</button>
-        <span style="font-size:0.8125rem; color:var(--color-text-secondary)">Safe: commitments are proposed for your confirmation</span>
+        <span style="font-size:0.8125rem; color:var(--color-text-muted)">All extracted commitments are proposed for confirmation before permanence.</span>
       </div>
     </form>
   </div>
@@ -89,3 +88,4 @@
     updateInputs();
   </script>
 {% endblock %}
+
