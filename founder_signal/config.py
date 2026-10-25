@@ -19,6 +19,8 @@ class Config:
     hermes_skill_endpoint: str | None = None
     web_host: str = "127.0.0.1"
     web_port: int = 5000
+    hermes_skill_host: str = "127.0.0.1"
+    hermes_skill_port: int = 8765
     briefing_coming_up_days: int = 7
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "gemma4:e2b-it-qat"
@@ -54,6 +56,8 @@ class Config:
             hermes_skill_endpoint=_getenv("HERMES_SKILL_ENDPOINT"),
             web_host=_getenv("WEB_HOST", "127.0.0.1") or "127.0.0.1",
             web_port=int(_getenv("WEB_PORT", "5000") or 5000),
+            hermes_skill_host=_getenv("HERMES_SKILL_HOST", "127.0.0.1") or "127.0.0.1",
+            hermes_skill_port=int(_getenv("HERMES_SKILL_PORT", "8765") or 8765),
             briefing_coming_up_days=int(
                 _getenv("BRIEFING_COMING_UP_DAYS", "7") or 7
             ),

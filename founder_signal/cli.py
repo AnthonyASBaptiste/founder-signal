@@ -65,7 +65,19 @@ def _ingest(args, config: Config) -> int:
         for c in reconciliation.new_commitments:
             ledger.add_commitment(c)
             added += 1
-        print(f"\nAdded {added} new commitment(s) to the ledger (status=open, awaiting your confirmation).")
+
+        applied = 0
+        if args.apply:
+            for issue in reconciliation.issues:
+                if issue.kind == "change" and issue.proposed is not None:
+                    ledger.update_commitment(issue.proposed)
+                    applied += 1
+            print(
+                f"\nAdded {added} new commitment(s); applied {applied} proposed change(s) "
+                f"to the ledger (status=open, awaiting your confirmation)."
+            )
+        else:
+            print(f"\nAdded {added} new commitment(s) to the ledger (status=open, awaiting your confirmation).")
 
         briefing = generate_briefing(ledger, coming_up_days=config.briefing_coming_up_days)
         print("\n" + "=" * 50)
@@ -121,6 +133,16 @@ def _watch(args, config: Config) -> int:
     return 0
 
 
+def _hermes_skill(args, config: Config) -> int:
+    """Serve the Founder Signal Hermes skill endpoint."""
+    from .hermes_skill import run_skill_server
+
+    host = args.host or config.hermes_skill_host
+    port = args.port or config.hermes_skill_port
+    run_skill_server(config, host=host, port=port)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="founder-signal",
@@ -134,6 +156,10 @@ def build_parser() -> argparse.ArgumentParser:
                           help="Type of source material.")
     p_ingest.add_argument("--title", help="Title for the source material.")
     p_ingest.add_argument("--llm", action="store_true", help="Use LLM extraction if OPENAI_API_KEY is set.")
+    p_ingest.add_argument(
+        "--apply", action="store_true",
+        help="Apply proposed changes (e.g. moved deadlines) to the ledger. Without this, changes are only reported."
+    )
     p_ingest.set_defaults(func=_ingest)
 
     p_scan = sub.add_parser("scan", help="Scan the inbox folder for new files and process them.")
@@ -152,6 +178,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_watch.add_argument("--once", action="store_true", help="Scan once and exit.")
     p_watch.add_argument("--interval", type=int, default=60, help="Polling interval in seconds.")
     p_watch.set_defaults(func=_watch)
+
+    p_hermes = sub.add_parser(
+        "hermes-skill",
+        help="Serve the Founder Signal skill as a Hermes-invokable HTTP endpoint.",
+    )
+    p_hermes.add_argument(
+        "--host", default=None, help="Bind host (default: HERMES_SKILL_HOST or 127.0.0.1)."
+    )
+    p_hermes.add_argument(
+        "--port", type=int, default=None, help="Bind port (default: HERMES_SKILL_PORT or 8765)."
+    )
+    p_hermes.set_defaults(func=_hermes_skill)
 
     return parser
 

@@ -1,0 +1,17 @@
+From: partner@acmeaccelerator.com
+To: Anthony <anthony@example.com>
+Subject: Accelerator update — week 4
+Date: Fri, 23 Oct 2026 09:00:00 +0000
+
+Hi Anthony,
+
+Great progress this quarter. A few action items from this week's update:
+
+- Please send the deck to Sarah next Friday.
+- Please share the investor list by end of week.
+
+Let me know if you need anything else.
+
+Best,
+Maya
+Acme Accelerator
