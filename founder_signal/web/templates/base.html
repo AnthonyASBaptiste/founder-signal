@@ -874,11 +874,15 @@
       header h1 { font-size: 1.2rem; }
       .cockpit-hero { padding: 1.25rem 1.15rem; }
       .cockpit-headline { font-size: 1.5rem; }
+      .btn, .filter-pill { min-height: 38px; }
     }
     @media (max-width: 480px) {
-      header { flex-direction: column; align-items: flex-start; }
+      header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
       .cockpit-hero-main { flex-direction: column; }
       .cockpit-metrics { grid-template-columns: repeat(2, 1fr); }
+      .cockpit-metrics .metric-chip:last-child:nth-child(odd) {
+        grid-column: span 2;
+      }
     }
   </style>
 </head>
