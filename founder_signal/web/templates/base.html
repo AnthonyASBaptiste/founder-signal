@@ -347,6 +347,7 @@
       text-align: left;
       padding: 0.95rem 1.15rem;
       border-bottom: 1px solid var(--color-border-subtle);
+      vertical-align: middle;
     }
     th {
       background: var(--color-th-bg);
@@ -509,14 +510,22 @@
     .actions-group {
       display: flex;
       align-items: center;
-      gap: 0.4rem;
-      flex-wrap: wrap;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+    .actions-group form {
+      margin: 0;
+      display: inline-flex;
     }
     .btn-action-done {
       background: var(--color-brand);
       color: #ffffff;
       border: 1px solid var(--color-brand);
       font-weight: 600;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn-action-done:hover {
       background: var(--color-brand-hover);
@@ -527,13 +536,17 @@
       border: 1px solid transparent;
       color: var(--color-text-muted);
       font-weight: 500;
-      padding: 0.3rem 0.55rem;
+      padding: 0.25rem 0.55rem;
       border-radius: var(--radius-sm);
       cursor: pointer;
       font-size: 0.8rem;
       font-family: inherit;
       text-decoration: none;
       transition: all 0.15s ease;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     tr:hover .btn-action-ghost,
     .briefing-item:hover .btn-action-ghost {
@@ -551,6 +564,10 @@
       color: var(--color-brand);
       border: 1px solid var(--color-border);
       font-weight: 600;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn-action-reopen:hover {
       background: var(--color-brand-surface);
