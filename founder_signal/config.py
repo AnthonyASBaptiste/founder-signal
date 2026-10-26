@@ -47,6 +47,7 @@ class Config:
     upload_extensions: str = "txt,md,mp3,wav,m4a,ogg,aac"
     himalaya_bin: str = "himalaya"
     heartbeat_days: int = 3
+    allow_cloud_fallback: bool = False
 
     def founder_for_account(self, account: str | None) -> tuple[str, str | None]:
         """Return (founder_name, founder_email) for a given himalaya account.
@@ -83,7 +84,7 @@ class Config:
             ollama_model=_getenv("FOUNDER_SIGNAL_MODEL", "gemma4:e2b-it-qat")
             or "gemma4:e2b-it-qat",
             use_llm=(_getenv("FOUNDER_SIGNAL_USE_LLM", "false") or "false").lower()
-            == "true",
+            in ("true", "1", "yes"),
             founder_name=_getenv("FOUNDER_NAME", "Anthony") or "Anthony",
             founder_email=_getenv("FOUNDER_EMAIL"),
             inbox_folder=_getenv("FOUNDER_SIGNAL_INBOX", "~/Downloads/founder-signal-inbox")
@@ -95,5 +96,7 @@ class Config:
             or "txt,md,mp3,wav,m4a,ogg,aac",
             himalaya_bin=_getenv("HIMALAYA_BIN", "himalaya") or "himalaya",
             heartbeat_days=int(_getenv("FOUNDER_SIGNAL_HEARTBEAT_DAYS", "3") or 3),
+            allow_cloud_fallback=(_getenv("FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK", "false") or "false").lower()
+            in ("true", "1", "yes"),
         )
 

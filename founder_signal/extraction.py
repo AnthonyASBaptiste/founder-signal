@@ -538,8 +538,8 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
         except Exception:
             pass
 
-        # Try OpenAI if an API key is present.
-        if os.environ.get("OPENAI_API_KEY"):
+        # Try OpenAI only if cloud fallback is explicitly permitted AND an API key is present.
+        if getattr(cfg, "allow_cloud_fallback", False) and os.environ.get("OPENAI_API_KEY"):
             attempted_provider = "openai"
             try:
                 from openai import OpenAI

@@ -77,7 +77,19 @@ def create_app(config: Config | None = None) -> Flask:
             commitments = ledger.list_commitments()
         finally:
             ledger.close()
-        return render_template("index.html", briefing=briefing, commitments=commitments)
+        inbox_path = Path(os.path.expanduser(config.inbox_folder))
+        needs_trans_dir = inbox_path / "needs_transcription"
+        needs_transcription_count = (
+            len([f for f in needs_trans_dir.iterdir() if f.is_file()])
+            if needs_trans_dir.exists()
+            else 0
+        )
+        return render_template(
+            "index.html",
+            briefing=briefing,
+            commitments=commitments,
+            needs_transcription_count=needs_transcription_count,
+        )
 
     @app.route("/commitments/<commitment_id>", methods=["GET", "POST"])
     def commitment_detail(commitment_id):
@@ -211,14 +223,22 @@ def create_app(config: Config | None = None) -> Flask:
                     if transcript:
                         body = transcript
                     else:
-                        body = (
-                            f"[Voice note audio file: {file.filename}]\n"
-                            f"Saved to: {saved_path}\n"
-                            f"This is an audio file. Transcription is needed before "
-                            f"commitments can be extracted. Install openai-whisper "
-                            f"(`pip install openai-whisper`) for automatic "
-                            f"transcription, or paste the transcript text separately."
+                        # Keep in a dedicated "needs transcription" state.
+                        # Do NOT extract commitments, do NOT record an ingested source,
+                        # and do NOT move into processed/.
+                        needs_trans_dir = inbox_path / "needs_transcription"
+                        needs_trans_dir.mkdir(parents=True, exist_ok=True)
+                        dest = needs_trans_dir / safe_name
+                        if dest.exists():
+                            dest = needs_trans_dir / f"{Path(safe_name).stem}.{int(time.time())}{Path(safe_name).suffix}"
+                        shutil.move(saved_path, str(dest))
+                        flash(
+                            f"Voice note '{title}' saved in 'needs transcription' state. "
+                            f"Transcription is required before commitments can be extracted. "
+                            f"Install openai-whisper (`pip install openai-whisper`) or upload a transcript file.",
+                            "warning",
                         )
+                        return redirect(url_for("index"))
 
             source_id = f"web:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
             source = Source(id=source_id, kind=kind, title=title, body=body)
@@ -244,17 +264,10 @@ def create_app(config: Config | None = None) -> Flask:
                         "warning",
                     )
                 if kind == "voice-note":
-                    if transcript:
-                        flash(
-                            f"Voice note '{title}' transcribed: {new_count} new commitment(s)",
-                            "success",
-                        )
-                    else:
-                        flash(
-                            f"Voice note '{title}' saved to inbox. "
-                            f"Transcription needed before commitment extraction.",
-                            "warning",
-                        )
+                    flash(
+                        f"Voice note '{title}' transcribed: {new_count} new commitment(s)",
+                        "success",
+                    )
                 else:
                     flash(
                         f"Ingested {kind} '{title}': {new_count} new commitment(s)",

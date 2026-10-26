@@ -120,7 +120,7 @@ How much time does this actually save?
 
 ## 5. Live Demo & How to Run It
 
-To make testing instant and completely safe for hackathon judges and readers, Founder Signal includes an automated demo script that runs in an isolated temporary database (never touching your local data), executing the full ingest → extract → reconcile → brief → voice note → Hermes agent flow in seconds:
+To make testing instant and completely safe for hackathon judges and readers, Founder Signal includes an automated demo script that runs in an isolated temporary database (never touching your local data), executing the full ingest → extract → reconcile → confirm → briefing → Hermes agent flow in seconds:
 
 ```bash
 git clone https://github.com/AnthonyASBaptiste/founder-signal.git
@@ -128,22 +128,22 @@ cd founder-signal
 pip install -r requirements.txt
 cp .env.example .env
 
-# Standard offline demo (isolated temp DB, rules engine)
+# Standard offline demo (isolated temp DB, deterministic rules engine)
 FOUNDER_NAME=Anthony bash demo/demo.sh
 
-# Or run with local Gemma open-weight LLM inference:
+# Or run with local Gemma open-weight LLM inference via Ollama:
 bash demo/demo.sh --gemma
 
-# Or run with MongoDB Atlas cloud ledger:
+# Or run with MongoDB Atlas cloud ledger backend:
 bash demo/demo.sh --mongodb
 ```
 
 ### What the demo script executes:
 1. **Initial Ingestion**: Ingests an authentic accelerator update email (`demo/samples/accelerator-update.txt`), extracting commitments with verbatim evidence into an isolated temporary database.
-2. **Reconciliation & Deadline Drift**: Ingests a schedule adjustment (`demo/samples/schedule-change.txt`), demonstrating how reconciliation detects Sarah's deck deadline moving from Friday to Monday and stages a proposed update.
-3. **Commitment Confirmation**: Applies the proposed change with `--apply` and outputs the updated morning cockpit briefing.
-4. **Local Voice Transcription**: Ingests voice note audio or transcript notes (`demo/samples/voice-memo-investor-sync.txt`), converting verbal promises into ledger records.
-5. **Live Hermes Agent Skill Invocation**: Starts the background Hermes skill HTTP server, tests `GET /skills/founder-signal/manifest` and invokes `POST /skills/founder-signal/invoke` to produce a JSON morning briefing directly consumable by autonomous agents.
+2. **Reconciliation & Deadline Drift**: Ingests a schedule adjustment (`demo/samples/schedule-change.txt`), demonstrating how reconciliation detects Sarah's deck deadline moving from Friday to Monday and stages a proposed update keeping both source quotes.
+3. **Applying Proposed Changes**: Re-runs ingestion with `--apply` (simulating founder confirmation) to safely update the deadline while maintaining the citation trail.
+4. **Morning Cockpit Briefing**: Generates the four-quadrant founder morning briefing (*Do now*, *Coming up*, *Waiting on*, *Clarify*) categorized by urgency and ownership.
+5. **Live Hermes Agent Skill Invocation**: Starts the background Hermes skill HTTP server, verifies dynamic skill discovery (`GET /skills/founder-signal/manifest`), and invokes the extraction skill (`POST /skills/founder-signal/invoke`) with raw agent text to return structured commitments.
 
 👉 **Source Code**: [github.com/AnthonyASBaptiste/founder-signal](https://github.com/AnthonyASBaptiste/founder-signal)
 
@@ -156,9 +156,9 @@ For a founder or executive, **privacy and confidentiality are non-negotiable**.
 A commitment ledger contains the lifeblood of a startup: unannounced product launch targets, runway discussions, confidential investor introductions, contract disputes, and sensitive customer commitments. Uploading this continuously to proprietary commercial cloud AI models introduces serious data sovereignty and privacy risks.
 
 Open innovation provides the ideal architecture:
-1. **Zero Data Egress**: Using open-weight models like Google Gemma running locally, all document parsing and semantic reasoning happen in local RAM. Not a single token is transmitted off-device.
+1. **Zero Data Egress by Default**: Operating with local models (Google Gemma via Ollama) or offline deterministic rules guarantees that document parsing and semantic reasoning happen locally. By default (`FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK=false`), zero tokens leave the machine—even if an `OPENAI_API_KEY` is present in the developer's environment. Cloud fallback to commercial APIs is strictly opt-in.
 2. **Cost Predictability**: Offline inference costs \$0/month. There are no surprise monthly API bills, token limits, or sudden tier changes.
-3. **Auditable & Resilient**: The deterministic rule fallback guarantees that even if an AI service is unavailable or an API key expires, the core ledger extraction and reconciliation continue functioning seamlessly.
+3. **Auditable & Resilient**: The deterministic rule engine guarantees that even when offline or without GPU acceleration, core ledger extraction and date reconciliation function reliably without external dependencies.
 
 ---
 

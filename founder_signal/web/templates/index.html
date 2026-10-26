@@ -77,8 +77,24 @@
         <span class="metric-chip-label">Total</span>
         <span class="metric-chip-value">{{ commitments|length }}</span>
       </div>
+      {% if needs_transcription_count and needs_transcription_count > 0 %}
+      <div class="metric-chip" style="border-color:#b45309; background: rgba(180, 83, 9, 0.08)">
+        <span class="metric-chip-label" style="color:#b45309; font-weight:600">Audio Pending</span>
+        <span class="metric-chip-value" style="color:#b45309">{{ needs_transcription_count }}</span>
+      </div>
+      {% endif %}
     </div>
   </section>
+
+  {% if needs_transcription_count and needs_transcription_count > 0 %}
+  <div class="alert alert-warning" style="margin-bottom:1.5rem" role="status">
+    <span class="alert-icon" aria-hidden="true">🎙️</span>
+    <span class="alert-message">
+      <strong>{{ needs_transcription_count }} voice note{{ 's' if needs_transcription_count != 1 }} in "needs transcription" state.</strong>
+      Audio files are held unprocessed until transcribed. Install <code>openai-whisper</code> for automatic transcription, or <a href="{{ url_for('ingest') }}" style="color:inherit; font-weight:600; text-decoration:underline">upload a transcript text file</a>.
+    </span>
+  </div>
+  {% endif %}
 
   <!-- Commitment Ledger Section -->
   <section class="section" aria-label="Commitment Ledger">

@@ -60,11 +60,11 @@ With Founder Signal: **~2 minutes** to ingest the week's sources and read the mo
 
 ## Open-source AI used
 
-- **Rule-based extractor** (deterministic, no model required) — works offline
-- **Ollama** — local, privacy-first LLM extraction via `gemma4:e2b-it-qat` (open-weight model)
-- **OpenAI** (optional) — API-based extraction when an API key is present
+- **Rule-based extractor** (deterministic, no model required) — works offline, zero external calls (used by default in `demo/demo.sh`)
+- **Ollama** — local, privacy-first LLM extraction via `gemma4:e2b-it-qat` (open-weight model, enabled via `--gemma`)
+- **OpenAI** (optional) — hosted API extraction, strictly opt-in (`FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK=true`) when an API key is present; disabled by default to maintain zero data egress
 - **Flask** — web UI and Hermes skill endpoint
-- **SQLite & MongoDB Atlas** — local zero-config and cloud cluster commitment ledgers
+- **SQLite & MongoDB Atlas** — local zero-config isolated SQLite store (default in `demo/demo.sh`) and cloud cluster commitment ledger (enabled via `--mongodb`)
 
 ## Hermes integration
 

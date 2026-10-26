@@ -180,13 +180,20 @@ class InboxWatcher:
                     f"{len(reconciliation.issues)} issue(s) needing review."
                 )
             else:
+                needs_trans_dir = self.inbox_path / "needs_transcription"
+                needs_trans_dir.mkdir(parents=True, exist_ok=True)
+                dest = needs_trans_dir / file_path.name
+                if dest.exists():
+                    dest = needs_trans_dir / f"{file_path.stem}.{int(time.time())}{file_path.suffix}"
+                shutil.move(str(file_path), str(dest))
                 print(
-                    f"[founder-signal] {file_path.name}: audio file saved to inbox. "
+                    f"[founder-signal] {file_path.name}: moved to needs_transcription/. "
                     f"Transcription is needed before commitments can be extracted. "
                     f"Install openai-whisper (pip install openai-whisper) for "
                     f"automatic transcription, or add a transcript file / paste "
                     f"the transcript text via the web app."
                 )
+                return
             self._mark_done(file_path)
             return
 
