@@ -32,7 +32,15 @@ def _read_text(path: Optional[str]) -> str:
 def _ingest(args, config: Config) -> int:
     ledger = open_ledger(config)
     try:
-        body = _read_text(args.file)
+        try:
+            body = _read_text(args.file)
+        except FileNotFoundError:
+            print(f"Error: file not found: {args.file}", file=sys.stderr)
+            return 1
+        except OSError as exc:
+            print(f"Error reading '{args.file}': {exc}", file=sys.stderr)
+            return 1
+
         if not body.strip():
             print("Error: no input provided.", file=sys.stderr)
             return 1
