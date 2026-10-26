@@ -150,6 +150,17 @@ def create_skill_app(config: Optional[Config] = None) -> Flask:
             )
             for c in reconciliation.new_commitments:
                 ledger.add_commitment(c)
+            for issue in reconciliation.issues:
+                if issue.kind == "change" and issue.proposed is not None:
+                    existing_c = ledger.get_commitment(issue.commitment_id)
+                    if existing_c:
+                        existing_c.pending_change = {
+                            "due_date": issue.proposed.due_date,
+                            "owner": issue.proposed.owner,
+                            "evidence": issue.proposed.evidence,
+                            "description": issue.description,
+                        }
+                        ledger.update_commitment(existing_c)
             briefing = generate_briefing(
                 ledger, coming_up_days=config.briefing_coming_up_days
             )
