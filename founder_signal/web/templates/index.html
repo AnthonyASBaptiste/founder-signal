@@ -17,11 +17,11 @@
           <h2 class="cockpit-headline">{{ do_now_count }} action{{ 's' if do_now_count != 1 }} need{{ '' if do_now_count != 1 else 's' }} your focus today</h2>
           <p class="cockpit-desc">{{ briefing.summary }}. Clear urgent bottlenecks first to maintain team momentum.</p>
         {% elif proposal_count > 0 %}
-          <div class="cockpit-eyebrow urgent" style="color:var(--color-warning, #d97706)">⚠️ Review Required</div>
+          <div class="cockpit-eyebrow warning">⚠️ Review Required</div>
           <h2 class="cockpit-headline">{{ proposal_count }} proposed change{{ 's need' if proposal_count != 1 else ' needs' }} your review</h2>
           <p class="cockpit-desc">Deadline or owner modifications were detected in incoming sources. Review and accept or reject the proposed updates.</p>
         {% elif clarify_count > 0 %}
-          <div class="cockpit-eyebrow urgent" style="color:var(--color-warning)">🔍 Needs Clarification</div>
+          <div class="cockpit-eyebrow warning">🔍 Needs Clarification</div>
           <h2 class="cockpit-headline">{{ clarify_count }} commitment{{ 's need' if clarify_count != 1 else ' needs' }} ownership or due dates</h2>
           <p class="cockpit-desc">Unassigned owners or unspecified dates detected in active sources. Assign them to ensure follow-through.</p>
         {% elif open_count > 0 %}
@@ -52,9 +52,9 @@
         <span class="metric-chip-value">{{ do_now_count }}</span>
       </div>
       {% if proposal_count > 0 %}
-      <div class="metric-chip" style="border-color:var(--color-warning, #d97706); background: rgba(217, 119, 6, 0.08)">
-        <span class="metric-chip-label" style="color:var(--color-warning, #d97706); font-weight:600">Proposed</span>
-        <span class="metric-chip-value" style="color:var(--color-warning, #d97706)">{{ proposal_count }}</span>
+      <div class="metric-chip proposed">
+        <span class="metric-chip-label">Proposed</span>
+        <span class="metric-chip-value">{{ proposal_count }}</span>
       </div>
       {% endif %}
       <div class="metric-chip">
@@ -78,9 +78,9 @@
         <span class="metric-chip-value">{{ commitments|length }}</span>
       </div>
       {% if needs_transcription_count and needs_transcription_count > 0 %}
-      <div class="metric-chip" style="border-color:#b45309; background: rgba(180, 83, 9, 0.08)">
-        <span class="metric-chip-label" style="color:#b45309; font-weight:600">Audio Pending</span>
-        <span class="metric-chip-value" style="color:#b45309">{{ needs_transcription_count }}</span>
+      <div class="metric-chip audio-pending">
+        <span class="metric-chip-label">Audio Pending</span>
+        <span class="metric-chip-value">{{ needs_transcription_count }}</span>
       </div>
       {% endif %}
     </div>
@@ -148,7 +148,7 @@
                 <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
                   {{ c.description }}
                   {% if c.pending_change %}
-                    <span class="badge" style="background:var(--color-warning, #d97706); color:#fff; font-size:0.68rem; margin-left:0.5rem; vertical-align:middle">Proposed Change</span>
+                    <span class="badge badge-proposal">Proposed Change</span>
                   {% endif %}
                 </div>
                 <div class="evidence-block">
@@ -184,7 +184,7 @@
               <td>
                 <div class="actions-group">
                   {% if c.pending_change %}
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm" style="background:var(--color-warning, #d97706); border-color:var(--color-warning, #d97706); color:#fff; padding:0.25rem 0.65rem">Review Change</a>
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-review">Review Change</a>
                   {% endif %}
                   {% if c.status == 'open' %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">

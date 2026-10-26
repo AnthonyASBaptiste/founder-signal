@@ -213,6 +213,7 @@
       margin-bottom: 0.35rem;
     }
     .cockpit-eyebrow.urgent { color: var(--color-urgent); }
+    .cockpit-eyebrow.warning { color: var(--color-warning); }
     .cockpit-eyebrow.calm { color: var(--color-brand); }
     .cockpit-headline {
       font-family: var(--font-serif);
@@ -275,6 +276,36 @@
     }
     .metric-chip.urgent .metric-chip-value {
       color: var(--color-urgent);
+    }
+    .metric-chip.proposed,
+    .metric-chip.audio-pending {
+      border-color: var(--color-warning);
+      background: var(--color-warning-surface);
+    }
+    .metric-chip.proposed .metric-chip-label,
+    .metric-chip.proposed .metric-chip-value,
+    .metric-chip.audio-pending .metric-chip-label,
+    .metric-chip.audio-pending .metric-chip-value {
+      color: var(--color-warning);
+    }
+    .btn-action-review {
+      background: var(--color-warning);
+      border-color: var(--color-warning);
+      color: #ffffff;
+      padding: 0.25rem 0.65rem;
+    }
+    .btn-action-review:hover {
+      background: #78350f;
+      border-color: #78350f;
+      color: #ffffff;
+    }
+    .badge-proposal {
+      background: var(--color-warning-surface);
+      color: var(--color-warning);
+      border: 1px solid #fde68a;
+      font-size: 0.68rem;
+      margin-left: 0.5rem;
+      vertical-align: middle;
     }
 
     /* Filter Bar */
