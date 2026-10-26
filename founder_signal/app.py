@@ -69,6 +69,14 @@ def create_app(config: Config | None = None) -> Flask:
     )
     config = config or Config.from_env()
 
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        flash(
+            f"File too large. Maximum allowed upload size is {config.max_upload_mb} MB.",
+            "error",
+        )
+        return redirect(url_for("ingest"))
+
     @app.route("/")
     def index():
         ledger = open_ledger(config)
