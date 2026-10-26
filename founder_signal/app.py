@@ -7,6 +7,8 @@ The agent proposes; the user confirms.
 from __future__ import annotations
 
 import os
+import shutil
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from flask import Flask, render_template, request, redirect, url_for, flash
@@ -24,24 +26,36 @@ def _allowed_file(filename: str, config: Config) -> bool:
     return ext in allowed
 
 
-def _process_source(source, config: Config, use_llm: bool = False) -> tuple[int, list]:
+def _process_source(source, config: Config, use_llm: bool = False) -> tuple[int, list, object]:
     """Run extraction + reconciliation for a source, add commitments to ledger.
 
-    Returns (new_commitment_count, issues).
+    Returns (new_commitment_count, issues, extraction_result).
     """
     from .extraction import extract, to_commitments
 
     ledger = open_ledger(config)
     try:
-        ledger.add_source(source)
         result = extract(source, use_llm=use_llm, config=config)
+        source.extractor = result.extractor
+        ledger.add_source(source)
         proposed = to_commitments(result, source.id)
         reconciliation = reconcile(
             ledger, proposed, within_days=config.briefing_coming_up_days
         )
         for c in reconciliation.new_commitments:
             ledger.add_commitment(c)
-        return len(reconciliation.new_commitments), reconciliation.issues
+        for issue in reconciliation.issues:
+            if issue.kind == "change" and issue.proposed is not None:
+                existing_c = ledger.get_commitment(issue.commitment_id)
+                if existing_c:
+                    existing_c.pending_change = {
+                        "due_date": issue.proposed.due_date,
+                        "owner": issue.proposed.owner,
+                        "evidence": issue.proposed.evidence,
+                        "description": issue.description,
+                    }
+                    ledger.update_commitment(existing_c)
+        return len(reconciliation.new_commitments), reconciliation.issues, result
     finally:
         ledger.close()
 
@@ -88,6 +102,22 @@ def create_app(config: Config | None = None) -> Flask:
                     # Mark as confirmed (still open, but acknowledged).
                     ledger.update_commitment(commitment)
                     flash("Commitment confirmed.", "success")
+                elif action == "accept_proposal":
+                    if commitment.pending_change:
+                        p = commitment.pending_change
+                        if "due_date" in p and p["due_date"] is not None:
+                            commitment.due_date = p["due_date"]
+                        if "owner" in p and p["owner"] is not None:
+                            commitment.owner = p["owner"]
+                        if p.get("evidence"):
+                            commitment.evidence = p["evidence"]
+                        commitment.pending_change = None
+                        ledger.update_commitment(commitment)
+                        flash("Proposed change accepted and applied.", "success")
+                elif action == "reject_proposal":
+                    commitment.pending_change = None
+                    ledger.update_commitment(commitment)
+                    flash("Proposed change rejected.", "info")
                 return redirect(url_for("commitment_detail", commitment_id=commitment_id))
         finally:
             ledger.close()
@@ -194,7 +224,25 @@ def create_app(config: Config | None = None) -> Flask:
             source = Source(id=source_id, kind=kind, title=title, body=body)
 
             try:
-                new_count, issues = _process_source(source, config, use_llm=use_llm)
+                new_count, issues, result = _process_source(source, config, use_llm=use_llm)
+                if saved_path and os.path.exists(saved_path):
+                    processed_dir = inbox_path / "processed"
+                    processed_dir.mkdir(parents=True, exist_ok=True)
+                    dest = processed_dir / safe_name
+                    if dest.exists():
+                        dest = processed_dir / f"{Path(safe_name).stem}.{int(time.time())}{Path(safe_name).suffix}"
+                    shutil.move(saved_path, str(dest))
+                    marker = inbox_path / f"{safe_name}.done"
+                    marker.write_text(
+                        f"processed by web upload at {datetime.now(timezone.utc).isoformat()}\n",
+                        encoding="utf-8",
+                    )
+                if getattr(result, "fallback_from", None):
+                    flash(
+                        f"Notice: LLM extraction via {result.fallback_from} unavailable; "
+                        f"fell back to rule-based extraction.",
+                        "warning",
+                    )
                 if kind == "voice-note":
                     if transcript:
                         flash(

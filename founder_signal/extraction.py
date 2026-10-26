@@ -47,6 +47,8 @@ class ExtractionResult:
     follow_ups: list[str] = field(default_factory=list)
     summary: str = ""
     raw: str = ""  # raw model output for audit
+    extractor: str = "rules"  # "ollama/gemma4:e2b-it-qat" | "openai/..." | "rules"
+    fallback_from: Optional[str] = None  # name of provider that failed prior to fallback
 
 
 # System prompt given to the LLM (or used as the skill's explicit instructions
@@ -498,6 +500,7 @@ def _ollama_extract(source: Source, host: str, model: str, config: Optional[Conf
     if parsed is not None:
         parsed.source = source
         parsed.raw = raw
+        parsed.extractor = f"ollama/{model}"
         return parsed
     return None
 
@@ -521,24 +524,30 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
     # Resolve founder identity for this account (per-account override or global).
     founder_name, founder_email = cfg.founder_for_account(account)
 
+    attempted_provider: Optional[str] = None
+
     # LLM is the primary path when requested (privacy-first via Ollama).
     if use_llm:
+        attempted_provider = "ollama"
         # Try local Ollama first (no API key needed, runs locally).
         try:
             ollama_result = _ollama_extract(source, cfg.ollama_host, cfg.ollama_model, cfg, founder_name, founder_email)
             if ollama_result is not None:
+                ollama_result.extractor = f"ollama/{cfg.ollama_model}"
                 return ollama_result
         except Exception:
             pass
 
         # Try OpenAI if an API key is present.
         if os.environ.get("OPENAI_API_KEY"):
+            attempted_provider = "openai"
             try:
                 from openai import OpenAI
                 client = OpenAI()
                 system_prompt = SKILL_SYSTEM_PROMPT + f"\n\nThe founder/recipient is: {founder_name}" + (f" ({founder_email})" if founder_email else "") + "."
+                model_name = os.environ.get("FOUNDER_SIGNAL_MODEL", "gpt-4o-mini")
                 completion = client.chat.completions.create(
-                    model=os.environ.get("FOUNDER_SIGNAL_MODEL", "gpt-4o-mini"),
+                    model=model_name,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": f"Source kind: {source.kind}\nTitle: {source.title}\nBody:\n{source.body}"},
@@ -551,6 +560,7 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
                 if parsed is not None:
                     parsed.source = source
                     parsed.raw = raw
+                    parsed.extractor = f"openai/{model_name}"
                     return parsed
             except Exception:
                 pass
@@ -558,6 +568,9 @@ def extract(source: Source, use_llm: bool = False, config: Optional[Config] = No
     # Deterministic rule-based fallback (works offline, no API key).
     result = _rule_based_extract(source, cfg, founder_name, founder_email)
     result.source = source
+    result.extractor = "rules"
+    if use_llm and attempted_provider:
+        result.fallback_from = attempted_provider
     return result
 
 

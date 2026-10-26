@@ -42,10 +42,13 @@ def _ingest(args, config: Config) -> int:
         source_id = f"{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
         source = Source(id=source_id, kind=kind, title=title, body=body)
 
-        ledger.add_source(source)
         result = extract(source, use_llm=args.llm, config=config)
+        source.extractor = result.extractor
+        ledger.add_source(source)
+        if result.fallback_from:
+            print(f"Notice: LLM extraction via {result.fallback_from} unavailable; fell back to rule-based extraction.")
         print(result.summary)
-        print(f"Source: {source.id} ({source.kind})")
+        print(f"Source: {source.id} ({source.kind}) [extractor: {source.extractor or 'rules'}]")
 
         proposed = to_commitments(result, source.id)
         reconciliation = reconcile(ledger, proposed, within_days=config.briefing_coming_up_days)
@@ -70,6 +73,7 @@ def _ingest(args, config: Config) -> int:
         if args.apply:
             for issue in reconciliation.issues:
                 if issue.kind == "change" and issue.proposed is not None:
+                    issue.proposed.pending_change = None
                     ledger.update_commitment(issue.proposed)
                     applied += 1
             print(
@@ -77,6 +81,17 @@ def _ingest(args, config: Config) -> int:
                 f"to the ledger (status=open, awaiting your confirmation)."
             )
         else:
+            for issue in reconciliation.issues:
+                if issue.kind == "change" and issue.proposed is not None:
+                    existing_c = ledger.get_commitment(issue.commitment_id)
+                    if existing_c:
+                        existing_c.pending_change = {
+                            "due_date": issue.proposed.due_date,
+                            "owner": issue.proposed.owner,
+                            "evidence": issue.proposed.evidence,
+                            "description": issue.description,
+                        }
+                        ledger.update_commitment(existing_c)
             print(f"\nAdded {added} new commitment(s) to the ledger (status=open, awaiting your confirmation).")
 
         briefing = generate_briefing(ledger, coming_up_days=config.briefing_coming_up_days)
@@ -198,7 +213,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
     args_list = list(sys.argv[1:] if argv is None else argv)
-    known_commands = {"ingest", "scan", "heartbeat", "briefing", "watch", "-h", "--help"}
+    known_commands = {"ingest", "scan", "heartbeat", "briefing", "watch", "hermes-skill", "-h", "--help"}
     if args_list and args_list[0] not in known_commands:
         args_list.insert(0, "ingest")
     args = parser.parse_args(args_list)

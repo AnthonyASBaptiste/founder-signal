@@ -106,34 +106,44 @@ graph TD
 
 How much time does this actually save?
 
-| Weekly Activity | Manual Status Quo | With Founder Signal |
-|---|---|---|
-| Rereading email threads for deliverables | 20–30 mins/wk | 0 mins (automated) |
-| Copying tasks & dates into notes/todo apps | 15–20 mins/wk | 0 mins (automated) |
-| Spotting moved deadlines & resolving conflicts | 10–15 mins/wk | 1 min (review proposals) |
-| Preparing daily priorities & follow-ups | 10–15 mins/wk | 1 min (scan Cockpit brief) |
-| **Total Cognitive Overhead** | **~60–80 minutes/wk** | **~2 minutes/wk** |
+| Weekly Activity | Manual Status Quo | With Founder Signal | Effort Saved |
+|---|---|---|---|
+| Rereading email threads for deliverables | 10–20 mins/wk | 0 mins (automated) | 10–20 mins/wk |
+| Copying tasks & dates into notes/todo apps | 5–10 mins/wk | 0 mins (automated) | 5–10 mins/wk |
+| Spotting moved deadlines & resolving conflicts | 5–15 mins/wk | 1 min (review proposals) | 4–14 mins/wk |
+| Preparing daily priorities & follow-ups | 5–10 mins/wk | 1 min (scan Cockpit brief) | 4–9 mins/wk |
+| **Total Cognitive Overhead** | **~25–55 minutes/wk** | **~2 minutes/wk** | **~23–53 minutes/wk** |
 
-**Estimated time saved: Over 1 hour per week** of tedious administrative chore time. More importantly, it completely eliminates the low-level anxiety of wondering *"Did I forget something I promised in that email thread on Thursday?"*
+**Estimated time saved: 25–55 minutes per week** of tedious administrative chore time. More importantly, it completely eliminates the low-level anxiety of wondering *"Did I forget something I promised in that email thread on Thursday?"*
 
 ---
 
 ## 5. Live Demo & How to Run It
 
-To make testing instant for hackathon judges and readers, Founder Signal includes an offline, reproducible demo script that demonstrates the full ingest → extract → reconcile → brief flow in under 10 seconds:
+To make testing instant and completely safe for hackathon judges and readers, Founder Signal includes an automated demo script that runs in an isolated temporary database (never touching your local data), executing the full ingest → extract → reconcile → brief → voice note → Hermes agent flow in seconds:
 
 ```bash
 git clone https://github.com/AnthonyASBaptiste/founder-signal.git
 cd founder-signal
 pip install -r requirements.txt
 cp .env.example .env
+
+# Standard offline demo (isolated temp DB, rules engine)
 FOUNDER_NAME=Anthony bash demo/demo.sh
+
+# Or run with local Gemma open-weight LLM inference:
+bash demo/demo.sh --gemma
+
+# Or run with MongoDB Atlas cloud ledger:
+bash demo/demo.sh --mongodb
 ```
 
 ### What the demo script executes:
-1. Ingests an authentic accelerator update email (`demo/samples/accelerator-update.txt`), extracting commitments with verbatim evidence.
-2. Ingests a schedule adjustment (`demo/samples/schedule-change.txt`), demonstrating how reconciliation identifies that Sarah's deck deadline shifted from Friday to Monday.
-3. Applies the change with `--apply` and outputs the updated morning cockpit briefing.
+1. **Initial Ingestion**: Ingests an authentic accelerator update email (`demo/samples/accelerator-update.txt`), extracting commitments with verbatim evidence into an isolated temporary database.
+2. **Reconciliation & Deadline Drift**: Ingests a schedule adjustment (`demo/samples/schedule-change.txt`), demonstrating how reconciliation detects Sarah's deck deadline moving from Friday to Monday and stages a proposed update.
+3. **Commitment Confirmation**: Applies the proposed change with `--apply` and outputs the updated morning cockpit briefing.
+4. **Local Voice Transcription**: Ingests voice note audio or transcript notes (`demo/samples/voice-memo-investor-sync.txt`), converting verbal promises into ledger records.
+5. **Live Hermes Agent Skill Invocation**: Starts the background Hermes skill HTTP server, tests `GET /skills/founder-signal/manifest` and invokes `POST /skills/founder-signal/invoke` to produce a JSON morning briefing directly consumable by autonomous agents.
 
 👉 **Source Code**: [github.com/AnthonyASBaptiste/founder-signal](https://github.com/AnthonyASBaptiste/founder-signal)
 

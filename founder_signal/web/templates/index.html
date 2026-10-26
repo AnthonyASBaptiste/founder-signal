@@ -5,15 +5,21 @@
   {% set open_count = open_commitments|length %}
   {% set do_now_count = briefing.do_now|length %}
   {% set clarify_count = briefing.needs_clarification|length %}
+  {% set pending_proposals = commitments|selectattr('pending_change')|list %}
+  {% set proposal_count = pending_proposals|length %}
 
   <!-- Attention-First Cockpit Hero -->
-  <section class="cockpit-hero {% if do_now_count > 0 %}has-urgent{% else %}is-calm{% endif %}" aria-label="Founder Cockpit Summary">
+  <section class="cockpit-hero {% if do_now_count > 0 or proposal_count > 0 %}has-urgent{% else %}is-calm{% endif %}" aria-label="Founder Cockpit Summary">
     <div class="cockpit-hero-main">
       <div class="cockpit-lead">
         {% if do_now_count > 0 %}
           <div class="cockpit-eyebrow urgent">⚡ Attention Required</div>
           <h2 class="cockpit-headline">{{ do_now_count }} action{{ 's' if do_now_count != 1 }} need{{ '' if do_now_count != 1 else 's' }} your focus today</h2>
           <p class="cockpit-desc">{{ briefing.summary }}. Clear urgent bottlenecks first to maintain team momentum.</p>
+        {% elif proposal_count > 0 %}
+          <div class="cockpit-eyebrow urgent" style="color:var(--color-warning, #d97706)">⚠️ Review Required</div>
+          <h2 class="cockpit-headline">{{ proposal_count }} proposed change{{ 's need' if proposal_count != 1 else ' needs' }} your review</h2>
+          <p class="cockpit-desc">Deadline or owner modifications were detected in incoming sources. Review and accept or reject the proposed updates.</p>
         {% elif clarify_count > 0 %}
           <div class="cockpit-eyebrow urgent" style="color:var(--color-warning)">🔍 Needs Clarification</div>
           <h2 class="cockpit-headline">{{ clarify_count }} commitment{{ 's need' if clarify_count != 1 else ' needs' }} ownership or due dates</h2>
@@ -45,6 +51,12 @@
         <span class="metric-chip-label">Do Now</span>
         <span class="metric-chip-value">{{ do_now_count }}</span>
       </div>
+      {% if proposal_count > 0 %}
+      <div class="metric-chip" style="border-color:var(--color-warning, #d97706); background: rgba(217, 119, 6, 0.08)">
+        <span class="metric-chip-label" style="color:var(--color-warning, #d97706); font-weight:600">Proposed</span>
+        <span class="metric-chip-value" style="color:var(--color-warning, #d97706)">{{ proposal_count }}</span>
+      </div>
+      {% endif %}
       <div class="metric-chip">
         <span class="metric-chip-label">Open</span>
         <span class="metric-chip-value">{{ open_count }}</span>
@@ -117,7 +129,12 @@
                 data-do-now="{% if c in briefing.do_now %}true{% else %}false{% endif %}" 
                 data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
               <td>
-                <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">{{ c.description }}</div>
+                <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
+                  {{ c.description }}
+                  {% if c.pending_change %}
+                    <span class="badge" style="background:var(--color-warning, #d97706); color:#fff; font-size:0.68rem; margin-left:0.5rem; vertical-align:middle">Proposed Change</span>
+                  {% endif %}
+                </div>
                 <div class="evidence-block">
                   <span class="source-chip" title="Source ID: {{ c.source_id }}">
                     {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Transcript{% else %}📄 Source{% endif %}
@@ -150,6 +167,9 @@
               <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
               <td>
                 <div class="actions-group">
+                  {% if c.pending_change %}
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm" style="background:var(--color-warning, #d97706); border-color:var(--color-warning, #d97706); color:#fff; padding:0.25rem 0.65rem">Review Change</a>
+                  {% endif %}
                   {% if c.status == 'open' %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="done">

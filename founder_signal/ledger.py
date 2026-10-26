@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
@@ -68,7 +69,8 @@ class SQLiteLedger(Ledger):
                 title TEXT NOT NULL,
                 body TEXT NOT NULL,
                 received_at TEXT,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                extractor TEXT
             );
             CREATE TABLE IF NOT EXISTS commitments (
                 id TEXT PRIMARY KEY,
@@ -82,6 +84,7 @@ class SQLiteLedger(Ledger):
                 follow_up TEXT,
                 status TEXT NOT NULL DEFAULT 'open',
                 evidence TEXT DEFAULT '',
+                pending_change TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (source_id) REFERENCES sources(id)
@@ -98,12 +101,20 @@ class SQLiteLedger(Ledger):
             cur.execute("ALTER TABLE commitments ADD COLUMN suggested_due_date TEXT")
         if "direction" not in existing_cols:
             cur.execute("ALTER TABLE commitments ADD COLUMN direction TEXT")
+        if "pending_change" not in existing_cols:
+            cur.execute("ALTER TABLE commitments ADD COLUMN pending_change TEXT")
+
+        cur.execute("PRAGMA table_info(sources)")
+        existing_source_cols = {row["name"] for row in cur.fetchall()}
+        if "extractor" not in existing_source_cols:
+            cur.execute("ALTER TABLE sources ADD COLUMN extractor TEXT")
+
         self.conn.commit()
 
     def add_source(self, source: Source) -> None:
         self.conn.execute(
-            "INSERT OR REPLACE INTO sources (id, kind, title, body, received_at, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO sources (id, kind, title, body, received_at, created_at, extractor) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 source.id,
                 source.kind,
@@ -111,6 +122,7 @@ class SQLiteLedger(Ledger):
                 source.body,
                 source.received_at.isoformat() if source.received_at else None,
                 source.created_at.isoformat(),
+                source.extractor,
             ),
         )
         self.conn.commit()
@@ -121,20 +133,23 @@ class SQLiteLedger(Ledger):
         ).fetchone()
         if not row:
             return None
+        raw_row = dict(row)
         return Source(
-            id=row["id"],
-            kind=row["kind"],
-            title=row["title"],
-            body=row["body"],
-            received_at=datetime.fromisoformat(row["received_at"]) if row["received_at"] else None,
-            created_at=datetime.fromisoformat(row["created_at"]),
+            id=raw_row["id"],
+            kind=raw_row["kind"],
+            title=raw_row["title"],
+            body=raw_row["body"],
+            received_at=datetime.fromisoformat(raw_row["received_at"]) if raw_row.get("received_at") else None,
+            created_at=datetime.fromisoformat(raw_row["created_at"]),
+            extractor=raw_row.get("extractor"),
         )
 
     def add_commitment(self, commitment: Commitment) -> None:
+        pending_json = json.dumps(commitment.pending_change) if commitment.pending_change else None
         self.conn.execute(
             "INSERT OR REPLACE INTO commitments "
-            "(id, source_id, description, owner, due_date, suggested_due_date, direction, decision, follow_up, status, evidence, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "(id, source_id, description, owner, due_date, suggested_due_date, direction, decision, follow_up, status, evidence, pending_change, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 commitment.id,
                 commitment.source_id,
@@ -147,6 +162,7 @@ class SQLiteLedger(Ledger):
                 commitment.follow_up,
                 commitment.status,
                 commitment.evidence,
+                pending_json,
                 commitment.created_at.isoformat(),
                 commitment.updated_at.isoformat(),
             ),
@@ -176,9 +192,10 @@ class SQLiteLedger(Ledger):
 
     def update_commitment(self, commitment: Commitment) -> None:
         commitment.updated_at = datetime.now(timezone.utc)
+        pending_json = json.dumps(commitment.pending_change) if commitment.pending_change else None
         self.conn.execute(
             "UPDATE commitments SET description=?, owner=?, due_date=?, suggested_due_date=?, direction=?, decision=?, "
-            "follow_up=?, status=?, evidence=?, updated_at=? WHERE id=?",
+            "follow_up=?, status=?, evidence=?, pending_change=?, updated_at=? WHERE id=?",
             (
                 commitment.description,
                 commitment.owner,
@@ -189,6 +206,7 @@ class SQLiteLedger(Ledger):
                 commitment.follow_up,
                 commitment.status,
                 commitment.evidence,
+                pending_json,
                 commitment.updated_at.isoformat(),
                 commitment.id,
             ),
@@ -207,20 +225,24 @@ class SQLiteLedger(Ledger):
 
     @staticmethod
     def _row_to_commitment(row: sqlite3.Row) -> Commitment:
+        raw_row = dict(row)
+        pending_val = raw_row.get("pending_change")
+        pending_change = json.loads(pending_val) if pending_val else None
         return Commitment(
-            id=row["id"],
-            source_id=row["source_id"],
-            description=row["description"],
-            owner=row["owner"],
-            due_date=row["due_date"],
-            suggested_due_date=row["suggested_due_date"],
-            direction=row["direction"],
-            decision=row["decision"],
-            follow_up=row["follow_up"],
-            status=row["status"],
-            evidence=row["evidence"] or "",
-            created_at=datetime.fromisoformat(row["created_at"]),
-            updated_at=datetime.fromisoformat(row["updated_at"]),
+            id=raw_row["id"],
+            source_id=raw_row["source_id"],
+            description=raw_row["description"],
+            owner=raw_row.get("owner"),
+            due_date=raw_row.get("due_date"),
+            suggested_due_date=raw_row.get("suggested_due_date"),
+            direction=raw_row.get("direction"),
+            decision=raw_row.get("decision"),
+            follow_up=raw_row.get("follow_up"),
+            status=raw_row.get("status", "open"),
+            evidence=raw_row.get("evidence") or "",
+            pending_change=pending_change,
+            created_at=datetime.fromisoformat(raw_row["created_at"]),
+            updated_at=datetime.fromisoformat(raw_row["updated_at"]),
         )
 
 
@@ -252,6 +274,7 @@ class MongoLedger(Ledger):
             body=doc["body"],
             received_at=datetime.fromisoformat(doc["received_at"]) if doc.get("received_at") else None,
             created_at=datetime.fromisoformat(doc["created_at"]),
+            extractor=doc.get("extractor"),
         )
 
     def add_commitment(self, commitment: Commitment) -> None:

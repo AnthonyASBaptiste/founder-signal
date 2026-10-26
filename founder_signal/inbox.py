@@ -139,9 +139,6 @@ class InboxWatcher:
                 )
                 source = Source(id=source_id, kind=kind, title=title, body=transcript)
 
-                # Persist source.
-                self.ledger.add_source(source)
-
                 # Run the Founder Signal skill (extraction) with per-account founder identity.
                 result = extract(
                     source,
@@ -149,6 +146,8 @@ class InboxWatcher:
                     config=self.config,
                     account=account,
                 )
+                source.extractor = result.extractor
+                self.ledger.add_source(source)
 
                 # Convert to proposed commitments and reconcile.
                 proposed = to_commitments(result, source.id)
@@ -161,6 +160,19 @@ class InboxWatcher:
                 # Add new commitments to the ledger (proposed; awaiting confirmation).
                 for c in reconciliation.new_commitments:
                     self.ledger.add_commitment(c)
+
+                # Stage proposed changes on existing commitments for human review
+                for issue in reconciliation.issues:
+                    if issue.kind == "change" and issue.proposed is not None:
+                        existing_c = self.ledger.get_commitment(issue.commitment_id)
+                        if existing_c:
+                            existing_c.pending_change = {
+                                "due_date": issue.proposed.due_date,
+                                "owner": issue.proposed.owner,
+                                "evidence": issue.proposed.evidence,
+                                "description": issue.description,
+                            }
+                            self.ledger.update_commitment(existing_c)
 
                 print(
                     f"[founder-signal] {file_path.name}: transcribed voice note, "
@@ -188,11 +200,10 @@ class InboxWatcher:
         source_id = f"inbox:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
         source = Source(id=source_id, kind=kind, title=title, body=body)
 
-        # Persist source.
-        self.ledger.add_source(source)
-
         # Run the Founder Signal skill (extraction) with per-account founder identity.
         result = extract(source, use_llm=self.config.use_llm, config=self.config, account=account)
+        source.extractor = result.extractor
+        self.ledger.add_source(source)
 
         # Convert to proposed commitments and reconcile.
         proposed = to_commitments(result, source.id)
@@ -203,6 +214,19 @@ class InboxWatcher:
         # Add new commitments to the ledger (proposed; awaiting confirmation).
         for c in reconciliation.new_commitments:
             self.ledger.add_commitment(c)
+
+        # Stage proposed changes on existing commitments for human review
+        for issue in reconciliation.issues:
+            if issue.kind == "change" and issue.proposed is not None:
+                existing_c = self.ledger.get_commitment(issue.commitment_id)
+                if existing_c:
+                    existing_c.pending_change = {
+                        "due_date": issue.proposed.due_date,
+                        "owner": issue.proposed.owner,
+                        "evidence": issue.proposed.evidence,
+                        "description": issue.description,
+                    }
+                    self.ledger.update_commitment(existing_c)
 
         # Mark file as processed.
         self._mark_done(file_path)
