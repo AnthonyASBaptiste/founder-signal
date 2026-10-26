@@ -119,7 +119,7 @@ def _scan(args, config: Config) -> int:
 
 def _heartbeat(args, config: Config) -> int:
     accounts = args.accounts.split(",") if args.accounts else None
-    run_heartbeat(config, accounts=accounts)
+    run_heartbeat(config, accounts=accounts, days=args.days)
     return 0
 
 
@@ -167,6 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_hb = sub.add_parser("heartbeat", help="Fetch new email via himalaya and process through Founder Signal.")
     p_hb.add_argument("--accounts", help="Comma-separated himalaya accounts to check (overrides env).")
+    p_hb.add_argument("--days", type=int, default=None, help="Number of days to look back for emails (default: from config/env).")
     p_hb.set_defaults(func=_heartbeat)
 
     p_brief = sub.add_parser("briefing", help="Generate and deliver the morning briefing.")

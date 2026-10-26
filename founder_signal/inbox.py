@@ -31,6 +31,24 @@ from .briefing import generate_briefing
 HIMALAYA_BIN = os.environ.get("HIMALAYA_BIN", "himalaya")
 HERMES_BIN = os.environ.get("HERMES_BIN", "hermes")
 
+
+def resolve_himalaya_bin(bin_name: Optional[str] = None) -> Optional[str]:
+    """Find the himalaya executable via exact path, PATH lookup, or standard install dirs."""
+    candidate = bin_name or os.environ.get("HIMALAYA_BIN", "himalaya")
+    if os.path.isabs(candidate) and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+        return candidate
+    found = shutil.which(candidate)
+    if found:
+        return found
+    for fallback in [
+        Path.home() / ".local" / "bin" / candidate,
+        Path("/usr/local/bin") / candidate,
+        Path("/usr/bin") / candidate,
+    ]:
+        if fallback.is_file() and os.access(fallback, os.X_OK):
+            return str(fallback)
+    return None
+
 # Optional local transcription for voice notes. Requires `pip install
 # openai-whisper` (and ffmpeg on the system). When unavailable, audio files
 # are saved to the inbox with a "transcription needed" note.
@@ -68,6 +86,9 @@ class InboxWatcher:
         self.inbox_path = Path(os.path.expanduser(config.inbox_folder))
         self.processed_path = self.inbox_path / "processed"
         self.ledger = open_ledger(config)
+        self.himalaya_bin = resolve_himalaya_bin(
+            getattr(config, "himalaya_bin", None) or os.environ.get("HIMALAYA_BIN", "himalaya")
+        )
 
     def ensure_dirs(self) -> None:
         self.inbox_path.mkdir(parents=True, exist_ok=True)
@@ -212,13 +233,19 @@ class InboxWatcher:
             encoding="utf-8",
         )
 
-    def heartbeat_email(self, accounts: Optional[list[str]] = None) -> int:
+    def heartbeat_email(
+        self,
+        accounts: Optional[list[str]] = None,
+        days: Optional[int] = None,
+    ) -> int:
         """Fetch new email via himalaya and write to the inbox folder.
 
         Returns the number of emails fetched.
         """
-        if not os.path.exists(HIMALAYA_BIN):
-            print(f"[founder-signal] himalaya not found at {HIMALAYA_BIN}", file=sys.stderr)
+        himalaya = self.himalaya_bin or resolve_himalaya_bin()
+        if not himalaya:
+            target = getattr(self.config, "himalaya_bin", HIMALAYA_BIN)
+            print(f"[founder-signal] himalaya not found at {target}", file=sys.stderr)
             return 0
 
         self.ensure_dirs()
@@ -227,7 +254,8 @@ class InboxWatcher:
             print("[founder-signal] No himalaya accounts configured.", file=sys.stderr)
             return 0
 
-        since = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+        lookback_days = days if days is not None else getattr(self.config, "heartbeat_days", 3)
+        since = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
         fetched = 0
 
         for account in accounts:
@@ -235,7 +263,7 @@ class InboxWatcher:
                 # Search envelopes received since yesterday, output as JSON.
                 result = subprocess.run(
                     [
-                        HIMALAYA_BIN,
+                        himalaya,
                         "envelope",
                         "search",
                         "-a",
@@ -245,7 +273,7 @@ class InboxWatcher:
                     ],
                     capture_output=True,
                     text=True,
-                    timeout=60,
+                    timeout=120,
                 )
                 if result.returncode != 0:
                     print(
@@ -277,7 +305,8 @@ class InboxWatcher:
                         fetched += 1
                         # Process immediately with per-account founder identity.
                         file_path = self.inbox_path / file_name
-                        self.process_file(file_path, account=account)
+                        if file_path.exists():
+                            self.process_file(file_path, account=account)
             except subprocess.TimeoutExpired:
                 print(f"[founder-signal] himalaya timed out for {account}", file=sys.stderr)
             except Exception as exc:  # noqa: BLE001
@@ -290,10 +319,13 @@ class InboxWatcher:
         env = os.environ.get("FOUNDER_SIGNAL_HIMALAYA_ACCOUNTS", "")
         if env:
             return [a.strip() for a in env.split(",") if a.strip()]
+        himalaya = self.himalaya_bin or resolve_himalaya_bin()
+        if not himalaya:
+            return []
         # Try to discover accounts from himalaya config.
         try:
             result = subprocess.run(
-                [HIMALAYA_BIN, "account", "list"],
+                [himalaya, "account", "list"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -325,12 +357,15 @@ class InboxWatcher:
         return []
 
     def _fetch_message_body(self, account: str, msg_id: str) -> Optional[str]:
+        himalaya = self.himalaya_bin or resolve_himalaya_bin()
+        if not himalaya:
+            return None
         try:
             result = subprocess.run(
-                [HIMALAYA_BIN, "message", "read", "-a", account, msg_id],
+                [himalaya, "message", "read", "-a", account, msg_id],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=60,
             )
             if result.returncode != 0:
                 return None
@@ -471,16 +506,21 @@ def run_watcher(config: Config, once: bool = False, interval_seconds: int = 60) 
         watcher.close()
 
 
-def run_heartbeat(config: Config, accounts: Optional[list[str]] = None) -> None:
+def run_heartbeat(
+    config: Config,
+    accounts: Optional[list[str]] = None,
+    days: Optional[int] = None,
+) -> None:
     """Run a single heartbeat email check.
 
     Args:
         config: Founder Signal configuration.
         accounts: himalaya accounts to check (defaults to config/env).
+        days: Optional number of lookback days (defaults to config.heartbeat_days).
     """
     watcher = InboxWatcher(config)
     try:
-        fetched = watcher.heartbeat_email(accounts)
+        fetched = watcher.heartbeat_email(accounts, days=days)
         print(f"[founder-signal] Heartbeat complete: {fetched} email(s) fetched and processed.")
     finally:
         watcher.close()

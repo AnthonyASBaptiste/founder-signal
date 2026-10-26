@@ -4,6 +4,21 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+# Automatically load .env if available
+try:
+    from dotenv import load_dotenv
+    # Look for .env in current directory and parent directory
+    env_file = Path(".env")
+    if not env_file.exists():
+        env_file = Path(__file__).resolve().parent.parent / ".env"
+    if env_file.exists():
+        load_dotenv(dotenv_path=env_file)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
 
 
 def _getenv(key: str, default: str | None = None) -> str | None:
@@ -30,6 +45,8 @@ class Config:
     inbox_folder: str = "~/Downloads/founder-signal-inbox"
     max_upload_mb: int = 25
     upload_extensions: str = "txt,md,mp3,wav,m4a,ogg,aac"
+    himalaya_bin: str = "himalaya"
+    heartbeat_days: int = 3
 
     def founder_for_account(self, account: str | None) -> tuple[str, str | None]:
         """Return (founder_name, founder_email) for a given himalaya account.
@@ -76,4 +93,7 @@ class Config:
                 "FOUNDER_SIGNAL_UPLOAD_EXTENSIONS", "txt,md,mp3,wav,m4a,ogg,aac"
             )
             or "txt,md,mp3,wav,m4a,ogg,aac",
+            himalaya_bin=_getenv("HIMALAYA_BIN", "himalaya") or "himalaya",
+            heartbeat_days=int(_getenv("FOUNDER_SIGNAL_HEARTBEAT_DAYS", "3") or 3),
         )
+

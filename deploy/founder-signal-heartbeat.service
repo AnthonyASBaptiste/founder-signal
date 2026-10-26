@@ -5,12 +5,13 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-# Set WorkingDirectory to your Founder Signal checkout, e.g.:
-# WorkingDirectory=/home/yourname/founder-signal
-# Or set FOUNDER_SIGNAL_HOME in the EnvironmentFile below and use a wrapper.
-WorkingDirectory=/opt/founder-signal
-EnvironmentFile=-/opt/founder-signal/.env
+# Recommended: Deploy as a user service in ~/.config/systemd/user/
+# If deployed system-wide in /etc/systemd/system/, uncomment and set User:
+# User=yourname
+WorkingDirectory=/home/anthony/Projects/founder-signal
+EnvironmentFile=-/home/anthony/Projects/founder-signal/.env
+Environment="PATH=/home/anthony/.local/bin:/usr/local/bin:/usr/bin:/bin"
 ExecStart=/usr/bin/python3 -m founder_signal.cli heartbeat --accounts zoho,gmail
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

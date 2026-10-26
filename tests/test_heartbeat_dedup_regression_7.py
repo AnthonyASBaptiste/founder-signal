@@ -17,7 +17,9 @@ def test_heartbeat_skips_already_processed_emails(monkeypatch, tmp_path):
         inbox_folder=str(inbox_dir),
     )
 
+    monkeypatch.setattr("founder_signal.inbox.resolve_himalaya_bin", lambda *args, **kwargs: "/mock/himalaya")
     watcher = InboxWatcher(cfg)
+    watcher.himalaya_bin = "/mock/himalaya"
     try:
         # Mock himalaya envelope search output
         envelope_data = [{"id": "msg_123", "subject": "Test update"}]
