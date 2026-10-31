@@ -18,6 +18,7 @@ from .ledger import open_ledger
 from .models import Commitment, Source
 from .reconciliation import reconcile
 from .briefing import generate_briefing
+from . import auth
 
 
 def _allowed_file(filename: str, config: Config) -> bool:
@@ -63,11 +64,15 @@ def _process_source(source, config: Config, use_llm: bool = False) -> tuple[int,
 def create_app(config: Config | None = None) -> Flask:
     template_folder = os.path.join(os.path.dirname(__file__), "web", "templates")
     app = Flask(__name__, template_folder=template_folder)
-    app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
-    app.config["MAX_CONTENT_LENGTH"] = (
-        (config or Config.from_env()).max_upload_mb * 1024 * 1024
-    )
     config = config or Config.from_env()
+    app.config["SECRET_KEY"] = config.flask_secret_key
+    app.config["MAX_CONTENT_LENGTH"] = config.max_upload_mb * 1024 * 1024
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = config.session_cookie_secure
+    app.config["PERMANENT_SESSION_LIFETIME"] = 7 * 24 * 60 * 60  # 7 days
+
+    auth.init_app(app)
 
     @app.errorhandler(413)
     def request_entity_too_large(error):

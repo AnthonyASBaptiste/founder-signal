@@ -1,9 +1,11 @@
 import io
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 from founder_signal.app import create_app
+from founder_signal.auth import _reset_cache_for_testing
 from founder_signal.config import Config
 from founder_signal.inbox import InboxWatcher
 from founder_signal.ledger import open_ledger
@@ -21,9 +23,17 @@ def test_web_upload_untranscribed_voice_note_state():
             ledger_backend="sqlite",
         )
 
+        # Configure single-user auth for the test client
+        os.environ["FS_ADMIN_USER"] = "test"
+        os.environ["FS_ADMIN_PASSWORD"] = "test"
+        _reset_cache_for_testing()
+
         app = create_app(config)
         app.config["TESTING"] = True
         client = app.test_client()
+
+        # Sign in before accessing protected routes
+        client.post("/login", data={"username": "test", "password": "test"})
 
         # Simulate whisper unavailable or failing to transcribe
         with patch("founder_signal.inbox._transcribe_audio", return_value=None):

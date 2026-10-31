@@ -605,6 +605,89 @@
       border-color: var(--color-brand-border);
     }
 
+    /* Login page */
+    .login-page {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 2rem 1rem;
+    }
+    .login-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      padding: 2.5rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 4px 20px -6px rgba(28, 25, 23, 0.05);
+    }
+    .login-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .login-header .brand-icon {
+      background: var(--color-brand-surface);
+      color: var(--color-brand);
+    }
+    .login-title {
+      margin: 0;
+      font-family: var(--font-serif);
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--color-text);
+    }
+    .login-subtitle {
+      margin: 0.25rem 0 0 0;
+      font-size: 0.9375rem;
+      color: var(--color-text-secondary);
+    }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .field label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .field input {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-warm);
+      color: var(--color-text);
+      font-size: 0.9375rem;
+      font-family: inherit;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 3px var(--color-brand-border);
+    }
+    .login-form .btn {
+      margin-top: 0.5rem;
+    }
+    .login-hint {
+      margin-top: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      text-align: center;
+    }
+    .login-hint code {
+      color: var(--color-brand);
+    }
+
     /* Signature Briefing Lanes */
     .grid-briefing {
       display: grid;
@@ -893,9 +976,14 @@
       <h1>Founder Signal</h1>
     </a>
     <nav aria-label="Main Navigation">
-      <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Cockpit</a>
-      <a href="{{ url_for('briefing_view') }}" class="{% if request.endpoint == 'briefing_view' %}active{% endif %}">Briefing</a>
-      <a href="{{ url_for('ingest') }}" class="{% if request.endpoint == 'ingest' %}active{% endif %}">Ingest</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Cockpit</a>
+        <a href="{{ url_for('briefing_view') }}" class="{% if request.endpoint == 'briefing_view' %}active{% endif %}">Briefing</a>
+        <a href="{{ url_for('ingest') }}" class="{% if request.endpoint == 'ingest' %}active{% endif %}">Ingest</a>
+        <a href="{{ url_for('auth.logout') }}" class="btn-outline">Sign out</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn">Sign in</a>
+      {% endif %}
     </nav>
   </header>
 

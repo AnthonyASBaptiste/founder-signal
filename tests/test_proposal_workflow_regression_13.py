@@ -1,7 +1,9 @@
+import os
 import tempfile
 from pathlib import Path
 
 from founder_signal.app import create_app
+from founder_signal.auth import _reset_cache_for_testing
 from founder_signal.config import Config
 from founder_signal.ledger import open_ledger
 
@@ -16,9 +18,17 @@ def test_proposal_accept_and_reject_workflow():
             briefing_coming_up_days=14,
         )
 
+        # Configure single-user auth for the test client
+        os.environ["FS_ADMIN_USER"] = "test"
+        os.environ["FS_ADMIN_PASSWORD"] = "test"
+        _reset_cache_for_testing()
+
         app = create_app(config)
         app.config["TESTING"] = True
         client = app.test_client()
+
+        # Sign in before accessing protected routes
+        client.post("/login", data={"username": "test", "password": "test"})
 
         # 1. Ingest initial commitment: "Please send the deck to Sarah next Friday."
         resp = client.post(
