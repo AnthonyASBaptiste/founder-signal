@@ -81,7 +81,7 @@ def load_user(user_id: str) -> AdminUser | None:
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("index"))
+        return redirect(url_for("dashboard"))
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
