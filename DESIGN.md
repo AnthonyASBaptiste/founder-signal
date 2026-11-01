@@ -31,28 +31,28 @@ colors:
   info-surface: "#dbeafe"
 typography:
   display:
-    fontFamily: "Newsreader", Charter, "Sitka Text", Cambria, Georgia, serif
+    fontFamily: '"Newsreader", Charter, "Sitka Text", Cambria, Georgia, serif'
     fontWeight: 600
     fontSize: 2.125rem
     letterSpacing: -0.025em
     lineHeight: 1.2
   heading:
-    fontFamily: "Newsreader", Charter, "Sitka Text", Cambria, Georgia, serif
+    fontFamily: '"Newsreader", Charter, "Sitka Text", Cambria, Georgia, serif'
     fontWeight: 600
     fontSize: 1.35rem
     letterSpacing: -0.015em
     lineHeight: 1.3
   body:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     fontSize: 0.9375rem
     lineHeight: 1.55
   label:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
     fontSize: 0.75rem
     fontWeight: 600
     letterSpacing: 0.05em
   mono:
-    fontFamily: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
     fontFeature: tnum
 rounded:
   sm: 4px
