@@ -30,7 +30,7 @@ Founder Signal is a local-first, evidence-backed commitment extraction and recon
 
 Unlike typical chatbots or simple summarizers that produce vague bullet points, Founder Signal anchors every extracted commitment to **verbatim source text** and reconciles new information against existing promises.
 
-```mermaid
+mermaid
 journey
     title The Founder Experience with Founder Signal
     section 1. Passive Intake
@@ -45,12 +45,12 @@ journey
     section 4. The Lazy Payoff
       Review 4-lane Morning Cockpit Briefing: 5: Founder
       1-tap confirm or dismiss: 5: Founder
-```
+
 
 ### The 4-Stage Pipeline:
 
 1. **Passive Ingestion**:
-   - Drops incoming email text, voice-note audio (`.mp3`, `.wav`), or meeting transcripts into a local inbox folder.
+   - Drops incoming email text, voice-note audio (.mp3= .wav), or meeting transcripts into a local inbox folder.
    - An automated background heartbeat pulls new emails directly from configured email accounts (e.g., Zoho, Gmail) via the CLI.
 2. **Deterministic & Open-Weight Extraction**:
    - Parses commitments, owners, due dates, decisions, and follow-ups.
@@ -71,7 +71,7 @@ journey
 
 Founder Signal was engineered with privacy, reliability, and modularity at its core.
 
-```mermaid
+mermaid
 graph TD
     Sources[Inbound Sources: Email, Voice Notes, Transcripts] --> Watcher[Inbox Watcher & Heartbeat Service]
     Watcher --> Extractor{Extractor Engine}
@@ -91,14 +91,14 @@ graph TD
     
     Ledger --> Web[Editorial Cockpit Dashboard]
     Ledger --> Hermes[Hermes Agent Skill Endpoint]
-```
+
 
 ### Stack Highlights:
-- **Core LLM**: **Gemma** open-weight model (`gemma4:e2b-it-qat`) running locally via Ollama. No sensitive pitch decks or private investor correspondence ever leave the founder's machine.
-- **Ledger Storage**: **MongoDB Atlas** (`pymongo`) for durable, scalable cloud storage of sources, extracted commitments, and reconciliation audit trails, with an offline SQLite fallback.
-- **Email Ingestion**: Native integration with the Himalaya CLI and Linux `systemd` user service running a reliable 15-minute background heartbeat.
+- **Core LLM**: **Gemma** open-weight model (gemma4:e2b-it-qat) running locally via Ollama. No sensitive pitch decks or private investor correspondence ever leave the founder's machine.
+- **Ledger Storage**: **MongoDB Atlas** (pymongo) for durable, scalable cloud storage of sources, extracted commitments, and reconciliation audit trails, with an offline SQLite fallback.
+- **Email Ingestion**: Native integration with the Himalaya CLI and Linux systemd user service running a reliable 15-minute background heartbeat.
 - **Web Interface**: Lightweight editorial cockpit UI rendered with Flask, featuring a high-contrast attention-first layout in warm ivory, spruce teal, and amber.
-- **Hermes Agent Integration**: Exposes a standard Hermes-compatible skill protocol (`GET /skills/founder-signal/manifest` and `POST /skills/founder-signal/invoke`).
+- **Hermes Agent Integration**: Exposes a standard Hermes-compatible skill protocol (GET /skills/founder-signal/manifest and POST /skills/founder-signal/invoke).
 
 ---
 
@@ -122,7 +122,7 @@ How much time does this actually save?
 
 To make testing instant and completely safe for hackathon judges and readers, Founder Signal includes an automated demo script that runs in an isolated temporary database (never touching your local data), executing the full ingest → extract → reconcile → confirm → briefing → Hermes agent flow in seconds:
 
-```bash
+bash
 git clone https://github.com/AnthonyASBaptiste/founder-signal.git
 cd founder-signal
 pip install -r requirements.txt
@@ -136,14 +136,14 @@ bash demo/demo.sh --gemma
 
 # Or run with MongoDB Atlas cloud ledger backend:
 bash demo/demo.sh --mongodb
-```
+
 
 ### What the demo script executes:
-1. **Initial Ingestion**: Ingests an authentic accelerator update email (`demo/samples/accelerator-update.txt`), extracting commitments with verbatim evidence into an isolated temporary database.
-2. **Reconciliation & Deadline Drift**: Ingests a schedule adjustment (`demo/samples/schedule-change.txt`), demonstrating how reconciliation detects Sarah's deck deadline moving from Friday to Monday and stages a proposed update keeping both source quotes.
-3. **Applying Proposed Changes**: Re-runs ingestion with `--apply` (simulating founder confirmation) to safely update the deadline while maintaining the citation trail.
+1. **Initial Ingestion**: Ingests an authentic accelerator update email (demo/samples/accelerator-update.txt), extracting commitments with verbatim evidence into an isolated temporary database.
+2. **Reconciliation & Deadline Drift**: Ingests a schedule adjustment (demo/samples/schedule-change.txt), demonstrating how reconciliation detects Sarah's deck deadline moving from Friday to Monday and stages a proposed update keeping both source quotes.
+3. **Applying Proposed Changes**: Re-runs ingestion with --apply (simulating founder confirmation) to safely update the deadline while maintaining the citation trail.
 4. **Morning Cockpit Briefing**: Generates the four-quadrant founder morning briefing (*Do now*, *Coming up*, *Waiting on*, *Clarify*) categorized by urgency and ownership.
-5. **Live Hermes Agent Skill Invocation**: Starts the background Hermes skill HTTP server, verifies dynamic skill discovery (`GET /skills/founder-signal/manifest`), and invokes the extraction skill (`POST /skills/founder-signal/invoke`) with raw agent text to return structured commitments.
+5. **Live Hermes Agent Skill Invocation**: Starts the background Hermes skill HTTP server, verifies dynamic skill discovery (GET /skills/founder-signal/manifest), and invokes the extraction skill (POST /skills/founder-signal/invoke) with raw agent text to return structured commitments.
 
 👉 **Source Code**: [github.com/AnthonyASBaptiste/founder-signal](https://github.com/AnthonyASBaptiste/founder-signal)
 
@@ -156,7 +156,7 @@ For a founder or executive, **privacy and confidentiality are non-negotiable**.
 A commitment ledger contains the lifeblood of a startup: unannounced product launch targets, runway discussions, confidential investor introductions, contract disputes, and sensitive customer commitments. Uploading this continuously to proprietary commercial cloud AI models introduces serious data sovereignty and privacy risks.
 
 Open innovation provides the ideal architecture:
-1. **Zero Data Egress by Default**: Operating with local models (Google Gemma via Ollama) or offline deterministic rules guarantees that document parsing and semantic reasoning happen locally. By default (`FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK=false`), zero tokens leave the machine—even if an `OPENAI_API_KEY` is present in the developer's environment. Cloud fallback to commercial APIs is strictly opt-in.
+1. **Zero Data Egress by Default**: Operating with local models (Google Gemma via Ollama) or offline deterministic rules guarantees that document parsing and semantic reasoning happen locally. By default (FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK=false), zero tokens leave the machine—even if an OPENAI_API_KEY is present in the developer's environment. Cloud fallback to commercial APIs is strictly opt-in.
 2. **Cost Predictability**: Offline inference costs \$0/month. There are no surprise monthly API bills, token limits, or sudden tier changes.
 3. **Auditable & Resilient**: The deterministic rule engine guarantees that even when offline or without GPU acceleration, core ledger extraction and date reconciliation function reliably without external dependencies.
 
@@ -165,5 +165,5 @@ Open innovation provides the ideal architecture:
 ## 7. Prize Categories Entered
 
 - [x] **Theme: Slow and Steady** — Rewards laziness by automating commitment capture and date reconciliation so founders can conserve energy and focus purely on high-leverage execution.
-- [x] **Best Use of Gemma** — Uses Google's open-weight **Gemma** (`gemma4:e2b-it-qat`) via Ollama as the local-first intelligence layer, achieving fast, private, and deterministic JSON extraction without data leaks.
-- [x] **Best Use of MongoDB Atlas** — Uses **MongoDB Atlas** as the production multi-collection ledger (`sources`, `commitments`), providing high-availability cloud storage, flexible schema handling for evolving metadata, and sub-millisecond query indexing.
+- [x] **Best Use of Gemma** — Uses Google's open-weight **Gemma** (gemma4:e2b-it-qat) via Ollama as the local-first intelligence layer, achieving fast, private, and deterministic JSON extraction without data leaks.
+- [x] **Best Use of MongoDB Atlas** — Uses **MongoDB Atlas** as the production multi-collection ledger (sources= commitments), providing high-availability cloud storage, flexible schema handling for evolving metadata, and sub-millisecond query indexing.

@@ -49,8 +49,8 @@ def resolve_himalaya_bin(bin_name: Optional[str] = None) -> Optional[str]:
             return str(fallback)
     return None
 
-# Optional local transcription for voice notes. Requires `pip install
-# openai-whisper` (and ffmpeg on the system). When unavailable, audio files
+# Optional local transcription for voice notes. Requires pip install
+# openai-whisper (and ffmpeg on the system). When unavailable, audio files
 # are saved to the inbox with a "transcription needed" note.
 _whisper_model = None
 

@@ -243,7 +243,7 @@ def create_app(config: Config | None = None) -> Flask:
                         flash(
                             f"Voice note '{title}' saved in 'needs transcription' state. "
                             f"Transcription is required before commitments can be extracted. "
-                            f"Install openai-whisper (`pip install openai-whisper`) or upload a transcript file.",
+                            f"Install openai-whisper (pip install openai-whisper) or upload a transcript file.",
                             "warning",
                         )
                         return redirect(url_for("index"))

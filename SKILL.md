@@ -1,7 +1,7 @@
 # Founder Signal — Hermes Skill
 
 ## Name
-`founder-signal`
+founder-signal
 
 ## Description
 Extracts commitments, deadlines, owners, decisions, and promised follow-ups
@@ -19,32 +19,32 @@ complete without your confirmation.
 
 1. Clone this repo and install dependencies:
 
-   ```bash
+   bash
    pip install -r requirements.txt
    cp .env.example .env
    # Adjust FOUNDER_NAME / FOUNDER_EMAIL and LEDGER_SQLITE_PATH as needed.
-   ```
+   
 
 2. Start the Founder Signal skill endpoint:
 
-   ```bash
+   bash
    python -m founder_signal.cli hermes-skill
    # Serves http://127.0.0.1:8765/skills/founder-signal
-   ```
+   
 
-   Configure host/port with `HERMES_SKILL_HOST` / `HERMES_SKILL_PORT`.
+   Configure host/port with HERMES_SKILL_HOST / HERMES_SKILL_PORT.
 
 3. Tell Hermes about the skill. Point Hermes at the skill endpoint:
 
-   ```
+   
    http://127.0.0.1:8765/skills/founder-signal/invoke
-   ```
+   
 
    The skill manifest is available at:
 
-   ```
+   
    GET http://127.0.0.1:8765/skills/founder-signal/manifest
-   ```
+   
 
    When Hermes encounters a message containing commitments (an accelerator
    update, a co-founder note, a meeting transcript), it invokes this skill
@@ -53,7 +53,7 @@ complete without your confirmation.
 
 ## Input (POST /skills/founder-signal/invoke)
 
-```json
+json
 {
   "input": "I will send the deck to Sarah by Friday, October 30.",
   "source_kind": "email",
@@ -61,19 +61,19 @@ complete without your confirmation.
   "account": "gmail",
   "use_llm": false
 }
-```
+
 
 | Field | Required | Description |
 |---|---|---|
-| `input` | yes | Source text to analyze. |
-| `source_kind` | no | `email` \| `transcript` \| `voice-note` (default `email`). |
-| `source_title` | no | Human-readable title for the source. |
-| `account` | no | himalaya account for per-account founder identity. |
-| `use_llm` | no | Use LLM extraction (Ollama/OpenAI) when available; otherwise rule-based. |
+| input | yes | Source text to analyze. |
+| source_kind | no | email \| transcript \| voice-note (default email). |
+| source_title | no | Human-readable title for the source. |
+| account | no | himalaya account for per-account founder identity. |
+| use_llm | no | Use LLM extraction (Ollama/OpenAI) when available; otherwise rule-based. |
 
 ## Output
 
-```json
+json
 {
   "ok": true,
   "source": { ... },
@@ -99,16 +99,16 @@ complete without your confirmation.
     "summary": "..."
   }
 }
-```
+
 
 ## Demo
 
-See `demo/demo.sh` for a reproducible, scripted demo of Hermes invoking the
+See demo/demo.sh for a reproducible, scripted demo of Hermes invoking the
 Founder Signal skill end to end: ingest → cited commitment → reconciliation
 issue (deadline moved Friday → Monday) → morning briefing.
 
 ## Safety
 
 The skill proposes changes only. Applying a proposed change (e.g. a moved
-deadline) requires your confirmation — in the CLI, `founder-signal ingest
---apply`; in the web UI, open the commitment and confirm/edit it.
+deadline) requires your confirmation — in the CLI, founder-signal ingest
+--apply; in the web UI, open the commitment and confirm/edit it.
