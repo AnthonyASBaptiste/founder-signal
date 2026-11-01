@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: founder-signal
+    env: python
+    region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python -m gunicorn --bind 0.0.0.0:$PORT wsgi:app"
+    envVars:
+      - key: LEDGER_BACKEND
+        value: mongodb
+      - key: FOUNDER_SIGNAL_USE_LLM
+        value: "false"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: PYTHON_VERSION
+        value: "3.14.8"
