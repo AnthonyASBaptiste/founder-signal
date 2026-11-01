@@ -189,19 +189,19 @@
                   {% if c.status == 'open' %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="done">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                     </form>
                     <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="ignore">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                     </form>
                   {% elif c.status in ('done', 'ignore') %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="open">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                     </form>
                     <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>

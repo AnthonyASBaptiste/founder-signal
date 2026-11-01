@@ -56,7 +56,7 @@ def test_cockpit_editorial_design_routes():
         client.post("/login", data={"username": "test", "password": "test"})
 
         # 1. Dashboard (Cockpit)
-        r_index = client.get("/")
+        r_index = client.get("/dashboard")
         assert r_index.status_code == 200
         html_idx = r_index.text
         # Warm palette & typography

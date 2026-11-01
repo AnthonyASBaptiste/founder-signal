@@ -86,8 +86,8 @@ def test_proposal_accept_and_reject_workflow():
         assert "Accept Proposal" in html
         assert "Reject Proposal" in html
 
-        # 4. Also verify index page displays "Proposed Change" badge and "Review Change" button
-        index_resp = client.get("/")
+        # 4. Also verify dashboard page displays "Proposed Change" badge and "Review Change" button
+        index_resp = client.get("/dashboard")
         assert index_resp.status_code == 200
         index_html = index_resp.get_data(as_text=True)
         assert "Proposed Change" in index_html

@@ -80,10 +80,15 @@ def create_app(config: Config | None = None) -> Flask:
             f"File too large. Maximum allowed upload size is {config.max_upload_mb} MB.",
             "error",
         )
-        return redirect(url_for("index"))
+        return redirect(url_for("dashboard"))
 
     @app.route("/")
     def index():
+        """Public product landing page."""
+        return render_template("landing.html")
+
+    @app.route("/dashboard")
+    def dashboard():
         ledger = open_ledger(config)
         try:
             briefing = generate_briefing(ledger, coming_up_days=config.briefing_coming_up_days)
@@ -111,7 +116,7 @@ def create_app(config: Config | None = None) -> Flask:
             commitment = ledger.get_commitment(commitment_id)
             if not commitment:
                 flash("Commitment not found.", "error")
-                return redirect(url_for("index"))
+                return redirect(url_for("dashboard"))
             source = ledger.get_source(commitment.source_id)
             if request.method == "POST":
                 action = request.form.get("action")
@@ -156,7 +161,7 @@ def create_app(config: Config | None = None) -> Flask:
             commitment = ledger.get_commitment(commitment_id)
             if not commitment:
                 flash("Commitment not found.", "error")
-                return redirect(url_for("index"))
+                return redirect(url_for("dashboard"))
             new_status = request.form.get("status")
             if new_status not in ("open", "done", "waiting", "deferred", "ignore"):
                 flash("Invalid status.", "error")
@@ -166,7 +171,7 @@ def create_app(config: Config | None = None) -> Flask:
             flash(f"Commitment marked as {new_status}.", "success")
         finally:
             ledger.close()
-        return redirect(request.form.get("next") or url_for("index"))
+        return redirect(request.form.get("next") or url_for("dashboard"))
 
     @app.route("/briefing")
     def briefing_view():

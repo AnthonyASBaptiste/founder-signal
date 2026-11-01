@@ -99,7 +99,7 @@ def login():
         if username == user.username and user.check_password(password):
             login_user(user, remember=True)
             session.permanent = True
-            next_url = request.args.get("next") or url_for("index")
+            next_url = request.args.get("next") or url_for("dashboard")
             flash("Signed in successfully.", "success")
             return redirect(next_url)
 
@@ -123,11 +123,12 @@ def init_app(app) -> None:
 
     @app.before_request
     def _require_login():
-        # Allow auth routes, static files, and the error handler.
+        # Allow auth routes, static files, the public landing page, and the error handler.
         if request.endpoint in (
             "auth.login",
             "auth.logout",
             "static",
+            "index",
         ) or (request.endpoint and request.endpoint.startswith("auth.")):
             return
         if not current_user.is_authenticated:

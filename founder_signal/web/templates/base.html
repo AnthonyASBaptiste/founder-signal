@@ -520,6 +520,16 @@
       text-decoration: none;
     }
     .btn:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--color-brand);
+      border-color: var(--color-brand);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: var(--color-brand-hover);
+      border-color: var(--color-brand-hover);
+      color: #ffffff;
+    }
     .btn-sm {
       padding: 0.3rem 0.65rem;
       font-size: 0.8rem;
@@ -968,16 +978,260 @@
       }
     }
   </style>
+
+  /* ===== Landing Page Styles ===== */
+  .landing-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    padding: 4rem 1rem;
+    background: var(--color-surface-warm);
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .hero-badge {
+    font-size: 1.5rem;
+  }
+  .hero-title {
+    font-family: var(--font-serif);
+    font-size: 3rem;
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.1;
+    margin: 0;
+  }
+  .hero-subtitle {
+    font-size: 1.25rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  .hero-actions .btn-primary {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: #ffffff;
+  }
+  .hero-actions .btn-primary:hover {
+    background: var(--color-brand-hover);
+    border-color: var(--color-brand-hover);
+  }
+  .hero-actions .btn-outline {
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+  .hero-actions .btn-outline:hover {
+    border-color: var(--color-brand);
+    color: var(--color-brand);
+  }
+  .hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .cockpit-preview {
+    width: 100%;
+    max-width: 420px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+  }
+  .preview-header {
+    background: var(--color-brand);
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .preview-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--color-border-subtle);
+  }
+  .preview-row:last-child {
+    border-bottom: none;
+  }
+  .preview-chip {
+    font-weight: 500;
+    color: var(--color-text);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .preview-due {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .preview-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius-full);
+  }
+  .preview-status.status-open {
+    background: var(--color-urgent-surface);
+    color: var(--color-urgent);
+    border: 1px solid var(--color-urgent-border);
+  }
+  .preview-status.status-done {
+    background: var(--color-success-surface);
+    color: var(--color-success);
+    border: 1px solid #bbf7d0;
+  }
+  .preview-status.status-waiting {
+    background: var(--color-warning-surface);
+    color: var(--color-warning);
+    border: 1px solid #fef3c7;
+  }
+
+  .landing-section {
+    padding: 4rem 1rem;
+  }
+  .section-heading {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--color-text);
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .steps-grid,
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .step,
+  .feature {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .step:hover,
+  .feature:hover {
+    border-color: var(--color-border);
+  }
+  .step-number {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-brand);
+  }
+  .step-title,
+  .feature-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+  }
+  .step-desc,
+  .feature-desc {
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .feature-icon {
+    font-size: 2rem;
+  }
+
+  .landing-privacy {
+    background: var(--color-bg);
+  }
+  .privacy-content {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .privacy-desc {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .landing-cta {
+    background: var(--color-brand);
+    color: #ffffff;
+    padding: 4rem 1rem;
+    text-align: center;
+  }
+  .cta-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .cta-title {
+    font-family: var(--font-serif);
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .cta-desc {
+    font-size: 1.1rem;
+    color: #e7e2d9;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+  .landing-cta .btn-primary {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: var(--color-brand);
+  }
+  .landing-cta .btn-primary:hover {
+    background: #f2eee7;
+    border-color: #f2eee7;
+  }
+
+  @media (max-width: 768px) {
+    .landing-hero {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+      padding: 3rem 1rem;
+    }
+    .hero-title {
+      font-size: 2.25rem;
+    }
+    .hero-subtitle {
+      font-size: 1.1rem;
+    }
+    .hero-actions {
+      flex-direction: column;
+    }
+  }
 </head>
 <body>
   <header>
-    <a href="{{ url_for('index') }}" class="brand">
+    <a href="{{ url_for('dashboard') }}" class="brand">
       <span class="brand-icon" aria-hidden="true">✦</span>
       <h1>Founder Signal</h1>
     </a>
     <nav aria-label="Main Navigation">
       {% if current_user.is_authenticated %}
-        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Cockpit</a>
+        <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Cockpit</a>
         <a href="{{ url_for('briefing_view') }}" class="{% if request.endpoint == 'briefing_view' %}active{% endif %}">Briefing</a>
         <a href="{{ url_for('processing_log') }}" class="{% if request.endpoint == 'processing_log' %}active{% endif %}">Processing Log</a>
         <a href="{{ url_for('auth.logout') }}" class="btn-outline">Sign out</a>

@@ -55,7 +55,7 @@ def test_index_does_not_perform_n_plus_one_source_queries(monkeypatch):
         # Sign in before accessing protected routes
         client.post("/login", data={"username": "test", "password": "test"})
 
-        response = client.get("/")
+        response = client.get("/dashboard")
         assert response.status_code == 200
         # If the N+1 loop exists in index(), get_source_calls will be > 0.
         # It must be 0 because sources are not rendered on the index page.

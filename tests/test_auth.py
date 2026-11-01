@@ -29,7 +29,7 @@ def _make_client(username="founder", password="secret"):
         os.unlink(db_path)
 
 
-def test_login_success_redirects_to_index(monkeypatch):
+def test_login_success_redirects_to_dashboard(monkeypatch):
     client = next(_make_client())
     resp = client.post(
         "/login",
@@ -52,7 +52,7 @@ def test_login_failure_shows_error(monkeypatch):
 
 def test_protected_route_redirects_to_login_when_unauthenticated(monkeypatch):
     client = next(_make_client())
-    resp = client.get("/")
+    resp = client.get("/dashboard")
     assert resp.status_code == 302
     assert "/login" in resp.headers["Location"]
 
@@ -66,5 +66,5 @@ def test_logout_redirects_to_login(monkeypatch):
     assert resp.status_code == 200
     assert b"Signed out" in resp.data
     # After logout, protected routes should redirect again
-    resp = client.get("/")
+    resp = client.get("/dashboard")
     assert resp.status_code == 302
