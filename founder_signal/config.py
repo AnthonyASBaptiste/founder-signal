@@ -48,6 +48,10 @@ class Config:
     himalaya_bin: str = "himalaya"
     heartbeat_days: int = 3
     allow_cloud_fallback: bool = False
+    flask_secret_key: str = "dev-secret-change-me"
+    fs_admin_user: str | None = None
+    fs_admin_password: str | None = None
+    session_cookie_secure: bool = False
 
     def founder_for_account(self, account: str | None) -> tuple[str, str | None]:
         """Return (founder_name, founder_email) for a given himalaya account.
@@ -97,6 +101,11 @@ class Config:
             himalaya_bin=_getenv("HIMALAYA_BIN", "himalaya") or "himalaya",
             heartbeat_days=int(_getenv("FOUNDER_SIGNAL_HEARTBEAT_DAYS", "3") or 3),
             allow_cloud_fallback=(_getenv("FOUNDER_SIGNAL_ALLOW_CLOUD_FALLBACK", "false") or "false").lower()
+            in ("true", "1", "yes"),
+            flask_secret_key=_getenv("FLASK_SECRET_KEY", "dev-secret-change-me") or "dev-secret-change-me",
+            fs_admin_user=_getenv("FS_ADMIN_USER"),
+            fs_admin_password=_getenv("FS_ADMIN_PASSWORD"),
+            session_cookie_secure=(_getenv("FS_SESSION_COOKIE_SECURE", "false") or "false").lower()
             in ("true", "1", "yes"),
         )
 

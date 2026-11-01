@@ -4,6 +4,7 @@
 import os
 import tempfile
 from founder_signal.app import create_app
+from founder_signal.auth import _reset_cache_for_testing
 from founder_signal.config import Config
 from founder_signal.ledger import SQLiteLedger
 from founder_signal.models import Commitment, Source
@@ -12,6 +13,12 @@ from founder_signal.models import Commitment, Source
 def test_cockpit_editorial_design_routes():
     fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
+
+    # Configure single-user auth for the test client
+    os.environ["FS_ADMIN_USER"] = "test"
+    os.environ["FS_ADMIN_PASSWORD"] = "test"
+    _reset_cache_for_testing()
+
     try:
         ledger = SQLiteLedger(db_path)
         source = Source(id="s1", kind="email", title="Urgent Email", body="Need urgent fix.")
@@ -45,8 +52,11 @@ def test_cockpit_editorial_design_routes():
         app.config["TESTING"] = True
         client = app.test_client()
 
+        # Sign in before accessing protected routes
+        client.post("/login", data={"username": "test", "password": "test"})
+
         # 1. Dashboard (Cockpit)
-        r_index = client.get("/")
+        r_index = client.get("/dashboard")
         assert r_index.status_code == 200
         html_idx = r_index.text
         # Warm palette & typography
@@ -80,12 +90,11 @@ def test_cockpit_editorial_design_routes():
         assert "source-preview-card" in html_detail
         assert "action" in html_detail
 
-        # 4. Ingest View
-        r_ingest = client.get("/ingest")
-        assert r_ingest.status_code == 200
-        html_ingest = r_ingest.text
-        assert "field-file-transcript" in html_ingest
-        assert "field-file-audio" in html_ingest
+        # 4. Processing Log View
+        r_log = client.get("/log")
+        assert r_log.status_code == 200
+        html_log = r_log.text
+        assert "processing-log" in html_log or "Processing Log" in html_log
     finally:
         if os.path.exists(db_path):
             os.unlink(db_path)

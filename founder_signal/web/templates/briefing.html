@@ -12,7 +12,7 @@
       <h3 class="deck-clear-title">The deck is clear</h3>
       <p class="deck-clear-desc">No overdue commitments, upcoming deadlines, or pending delegations. Everything in your cockpit is under control.</p>
       <div style="margin-top:1.25rem">
-        <a href="{{ url_for('index') }}" class="btn btn-outline">← Return to Cockpit</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Return to Cockpit</a>
       </div>
     </div>
   {% endif %}
@@ -230,7 +230,7 @@
   </div>
 
   <div>
-    <a href="{{ url_for('index') }}" class="btn btn-outline">← Back to Cockpit</a>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">← Back to Cockpit</a>
   </div>
 {% endblock %}
 

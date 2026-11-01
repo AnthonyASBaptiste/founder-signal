@@ -1,8 +1,7 @@
-import io
+import os
 import tempfile
 from pathlib import Path
 
-from founder_signal.app import create_app
 from founder_signal.config import Config
 from founder_signal.inbox import InboxWatcher
 from founder_signal.ledger import open_ledger
@@ -20,25 +19,16 @@ def test_upload_dedup_and_processed_marker():
             ledger_backend="sqlite",
         )
 
-        app = create_app(config)
-        app.config["TESTING"] = True
-        client = app.test_client()
+        # Write a transcript file directly to the inbox
+        (inbox_dir / "term_sheet_call.txt").write_text("I will send the term sheet by tomorrow afternoon.")
 
-        # Upload a transcript file
-        file_content = b"I will send the term sheet by tomorrow afternoon."
-        data = {
-            "kind": "transcript",
-            "title": "Investor Call",
-            "file": (io.BytesIO(file_content), "term_sheet_call.txt"),
-        }
-
-        response = client.post(
-            "/ingest",
-            data=data,
-            content_type="multipart/form-data",
-            follow_redirects=True,
-        )
-        assert response.status_code == 200
+        # Run the inbox watcher scan
+        watcher = InboxWatcher(config)
+        try:
+            processed_count = watcher.scan()
+            assert processed_count == 1
+        finally:
+            watcher.close()
 
         # Check ledger has 1 commitment
         ledger = open_ledger(config)
@@ -56,7 +46,7 @@ def test_upload_dedup_and_processed_marker():
         # 3. .done marker must exist in inbox_dir
         assert (inbox_dir / "term_sheet_call.txt.done").exists()
 
-        # 4. Now run InboxWatcher.scan() - it must process 0 files!
+        # 4. Now run InboxWatcher.scan() again - it must process 0 files!
         watcher = InboxWatcher(config)
         try:
             processed_count = watcher.scan()

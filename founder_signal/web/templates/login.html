@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-header">
+        <span class="brand-icon" aria-hidden="true">✦</span>
+        <h2 class="login-title">Founder Signal</h2>
+        <p class="login-subtitle">Sign in to access your commitment ledger.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="alert-container" aria-live="polite">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}" role="{% if category == 'error' %}alert{% else %}status{% endif %}">
+                <span class="alert-icon" aria-hidden="true">
+                  {% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}
+                </span>
+                <span class="alert-message">{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('auth.login') }}" class="login-form" novalidate>
+        <div class="field">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            name="username"
+            id="username"
+            required
+            autocomplete="username"
+            autofocus
+            placeholder="e.g. anthony"
+          />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            name="password"
+            id="password"
+            required
+            autocomplete="current-password"
+            placeholder="••••••••"
+          />
+        </div>
+        <button type="submit" class="btn">Sign in</button>
+      </form>
+
+      <p class="login-hint">
+        Credentials are configured via the <code>FS_ADMIN_USER</code> and
+        <code>FS_ADMIN_PASSWORD</code> environment variables.
+      </p>
+    </div>
+  </div>
+{% endblock %}

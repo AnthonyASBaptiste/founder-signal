@@ -40,7 +40,7 @@
           <button type="button" class="btn btn-outline" onclick="filterCommitments('do_now')">Filter Do Now</button>
         {% else %}
           <a href="{{ url_for('briefing_view') }}" class="btn btn-outline">Read Morning Briefing</a>
-          <a href="{{ url_for('ingest') }}" class="btn">+ Ingest Source</a>
+          <a href="{{ url_for('processing_log') }}" class="btn">+ Processing Log</a>
         {% endif %}
       </div>
     </div>
@@ -91,7 +91,7 @@
     <span class="alert-icon" aria-hidden="true">🎙️</span>
     <span class="alert-message">
       <strong>{{ needs_transcription_count }} voice note{{ 's' if needs_transcription_count != 1 }} in "needs transcription" state.</strong>
-      Audio files are held unprocessed until transcribed. Install <code>openai-whisper</code> for automatic transcription, or <a href="{{ url_for('ingest') }}" style="color:inherit; font-weight:600; text-decoration:underline">upload a transcript text file</a>.
+      Audio files are held unprocessed until transcribed. Install <code>openai-whisper</code> for automatic transcription, or <a href="{{ url_for('processing_log') }}" style="color:inherit; font-weight:600; text-decoration:underline">view processing log</a>.
     </span>
   </div>
   {% endif %}
@@ -103,7 +103,7 @@
         <h3 class="section-title">Commitment Ledger</h3>
         <p style="font-size:0.875rem; color:var(--color-text-secondary); margin:0.2rem 0 0 0">Verbatim source tracking with quiet inline triage.</p>
       </div>
-      <a href="{{ url_for('ingest') }}" class="btn btn-sm btn-outline">+ Ingest New Source</a>
+      <a href="{{ url_for('processing_log') }}" class="btn btn-sm btn-outline">+ Processing Log</a>
     </div>
 
     {% if commitments %}
@@ -189,19 +189,19 @@
                   {% if c.status == 'open' %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="done">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
                     </form>
                     <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="ignore">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
                     </form>
                   {% elif c.status in ('done', 'ignore') %}
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
                       <input type="hidden" name="status" value="open">
-                      <input type="hidden" name="next" value="{{ url_for('index') }}">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
                       <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
                     </form>
                     <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
@@ -244,7 +244,7 @@
         <h3 class="deck-clear-title">The deck is clear</h3>
         <p class="deck-clear-desc">No commitments in your ledger yet. Drop in an email, meeting transcript, or voice note to extract actionable signals.</p>
         <div style="margin-top:1.25rem">
-          <a href="{{ url_for('ingest') }}" class="btn">+ Ingest First Source</a>
+          <a href="{{ url_for('processing_log') }}" class="btn">+ Processing Log</a>
         </div>
       </div>
     {% endif %}

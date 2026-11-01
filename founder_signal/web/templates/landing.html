@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <!-- Hero Section -->
+  <section class="landing-hero" aria-label="Founder Signal Hero">
+    <div class="hero-content">
+      <span class="hero-badge" aria-hidden="true">✦</span>
+      <h1 class="hero-title">Founder Signal</h1>
+      <p class="hero-subtitle">
+        Extract commitments from your email, transcripts, and voice notes.
+        Reconcile changes. Never lose track of what you promised.
+      </p>
+      <div class="hero-actions">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in to Cockpit</a>
+        <a href="#how-it-works" class="btn btn-outline">How It Works</a>
+      </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="cockpit-preview">
+        <div class="preview-header">Commitment Ledger</div>
+        <div class="preview-row">
+          <span class="preview-chip">Send the deck to Sarah</span>
+          <span class="preview-due">Due Oct 30</span>
+          <span class="preview-status status-open">Open</span>
+        </div>
+        <div class="preview-row">
+          <span class="preview-chip">Quarterly review delivery</span>
+          <span class="preview-due">Due Nov 6</span>
+          <span class="preview-status status-done">Done</span>
+        </div>
+        <div class="preview-row">
+          <span class="preview-chip">Reach out to lead investor</span>
+          <span class="preview-due">No date</span>
+          <span class="preview-status status-waiting">Waiting</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="landing-section" aria-label="How It Works">
+    <h2 class="section-heading">How It Works</h2>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3 class="step-title">Drop material in your inbox</h3>
+        <p class="step-desc">Emails, meeting transcripts, voice notes, and screen recordings go into your inbox folder. A local cron job picks them up on a schedule you control.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3 class="step-title">Ollama extracts commitments</h3>
+        <p class="step-desc">Runs locally on your machine via Ollama — nothing leaves your device. Commitments are extracted and reconciled against your existing ledger.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3 class="step-title">Review in your cockpit</h3>
+        <p class="step-desc">Sign in to Founder Signal online to see all commitments, proposed changes, and what needs your attention today. Your data lives in MongoDB Atlas, shared between local and cloud.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="landing-section" aria-label="Features">
+    <h2 class="section-heading">Built for Founders</h2>
+    <div class="features-grid">
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">📧</span>
+        <h3 class="feature-title">Email Ingestion</h3>
+        <p class="feature-desc">Pull commitments from your email via himalaya or drop .eml files in your inbox.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">🎙️</span>
+        <h3 class="feature-title">Voice &amp; Video</h3>
+        <p class="feature-desc">Transcribe meeting recordings and screen captures with openai-whisper, then extract commitments.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">🔄</span>
+        <h3 class="feature-title">Change Reconciliation</h3>
+        <p class="feature-desc">When dates or owners shift, proposed changes are flagged for your review — accept or reject with one click.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">📊</span>
+        <h3 class="feature-title">Morning Briefing</h3>
+        <p class="feature-desc">Do-now, coming-up, waiting-on, and needs-clarification lanes so you know exactly where to focus.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">🔒</span>
+        <h3 class="feature-title">Single Founder Login</h3>
+        <p class="feature-desc">Password-protected access to your commitment ledger. Your email contents stay private.</p>
+      </div>
+      <div class="feature">
+        <span class="feature-icon" aria-hidden="true">🪵</span>
+        <h3 class="feature-title">Processing Log</h3>
+        <p class="feature-desc">See every file processed — filename, source, date received, date processed, status, and commitments extracted.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section class="landing-section landing-privacy" aria-label="Privacy">
+    <div class="privacy-content">
+      <h2 class="section-heading">Privacy First</h2>
+      <p class="privacy-desc">
+        Extraction runs on <strong>your machine</strong> via Ollama. Nothing is sent to a cloud LLM.
+        The Render frontend only reads from your shared MongoDB Atlas database — it never processes raw email content.
+      </p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="landing-cta" aria-label="Get Started">
+    <div class="cta-content">
+      <h2 class="cta-title">Ready to run your founder cockpit?</h2>
+      <p class="cta-desc">Sign in to access your commitment ledger and start reviewing what needs your attention.</p>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in</a>
+    </div>
+  </section>
+{% endblock %}

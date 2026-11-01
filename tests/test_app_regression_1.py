@@ -6,6 +6,7 @@
 import os
 import tempfile
 from founder_signal.app import create_app
+from founder_signal.auth import _reset_cache_for_testing
 from founder_signal.config import Config
 from founder_signal.ledger import SQLiteLedger
 from founder_signal.models import Commitment, Source
@@ -24,6 +25,11 @@ class SpyLedger(SQLiteLedger):
 def test_index_does_not_perform_n_plus_one_source_queries(monkeypatch):
     fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
+
+    # Configure single-user auth for the test client
+    os.environ["FS_ADMIN_USER"] = "test"
+    os.environ["FS_ADMIN_PASSWORD"] = "test"
+    _reset_cache_for_testing()
 
     ledger = SpyLedger(db_path)
     try:
@@ -46,7 +52,10 @@ def test_index_does_not_perform_n_plus_one_source_queries(monkeypatch):
         app.config["TESTING"] = True
         client = app.test_client()
 
-        response = client.get("/")
+        # Sign in before accessing protected routes
+        client.post("/login", data={"username": "test", "password": "test"})
+
+        response = client.get("/dashboard")
         assert response.status_code == 200
         # If the N+1 loop exists in index(), get_source_calls will be > 0.
         # It must be 0 because sources are not rendered on the index page.

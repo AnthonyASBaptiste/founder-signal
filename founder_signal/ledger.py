@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Optional
 
-from .models import Commitment, Source
+from .models import Commitment, ProcessingLog, Source
 
 
 class Ledger(ABC):
@@ -40,6 +40,14 @@ class Ledger(ABC):
 
     @abstractmethod
     def find_by_source(self, source_id: str) -> list[Commitment]:
+        ...
+
+    @abstractmethod
+    def add_processing_log(self, log: ProcessingLog) -> None:
+        ...
+
+    @abstractmethod
+    def list_processing_logs(self) -> list[ProcessingLog]:
         ...
 
     @abstractmethod
@@ -92,6 +100,18 @@ class SQLiteLedger(Ledger):
             CREATE INDEX IF NOT EXISTS idx_commitments_source ON commitments(source_id);
             CREATE INDEX IF NOT EXISTS idx_commitments_status ON commitments(status);
             CREATE INDEX IF NOT EXISTS idx_commitments_due ON commitments(due_date);
+            CREATE TABLE IF NOT EXISTS processing_log (
+                id TEXT PRIMARY KEY,
+                filename TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                source_id TEXT,
+                received_at TEXT,
+                processed_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'ok',
+                commitment_count INTEGER NOT NULL DEFAULT 0,
+                error_message TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_processing_log_processed_at ON processing_log(processed_at);
             """
         )
         # Migration: add new columns to existing databases
@@ -220,8 +240,48 @@ class SQLiteLedger(Ledger):
         ).fetchall()
         return [self._row_to_commitment(r) for r in rows]
 
+    def add_processing_log(self, log: ProcessingLog) -> None:
+        self.conn.execute(
+            "INSERT OR REPLACE INTO processing_log "
+            "(id, filename, kind, source_id, received_at, processed_at, status, commitment_count, error_message) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                log.id,
+                log.filename,
+                log.kind,
+                log.source_id,
+                log.received_at.isoformat() if log.received_at else None,
+                log.processed_at.isoformat(),
+                log.status,
+                log.commitment_count,
+                log.error_message,
+            ),
+        )
+        self.conn.commit()
+
+    def list_processing_logs(self) -> list[ProcessingLog]:
+        rows = self.conn.execute(
+            "SELECT * FROM processing_log ORDER BY processed_at DESC"
+        ).fetchall()
+        return [self._row_to_processing_log(r) for r in rows]
+
     def close(self) -> None:
         self.conn.close()
+
+    @staticmethod
+    def _row_to_processing_log(row: sqlite3.Row) -> ProcessingLog:
+        raw_row = dict(row)
+        return ProcessingLog(
+            id=raw_row["id"],
+            filename=raw_row["filename"],
+            kind=raw_row["kind"],
+            source_id=raw_row.get("source_id"),
+            received_at=datetime.fromisoformat(raw_row["received_at"]) if raw_row.get("received_at") else None,
+            processed_at=datetime.fromisoformat(raw_row["processed_at"]),
+            status=raw_row.get("status", "ok"),
+            commitment_count=raw_row.get("commitment_count", 0),
+            error_message=raw_row.get("error_message"),
+        )
 
     @staticmethod
     def _row_to_commitment(row: sqlite3.Row) -> Commitment:
@@ -256,9 +316,11 @@ class MongoLedger(Ledger):
         self.db = self.client[database]
         self.sources = self.db["sources"]
         self.commitments = self.db["commitments"]
+        self.processing_logs = self.db["processing_logs"]
         self.commitments.create_index("source_id")
         self.commitments.create_index("status")
         self.commitments.create_index("due_date")
+        self.processing_logs.create_index("processed_at")
 
     def add_source(self, source: Source) -> None:
         self.sources.replace_one({"id": source.id}, source.to_dict(), upsert=True)
@@ -301,6 +363,13 @@ class MongoLedger(Ledger):
     def find_by_source(self, source_id: str) -> list[Commitment]:
         cursor = self.commitments.find({"source_id": source_id}).sort("created_at", 1)
         return [Commitment.from_dict(d) for d in cursor]
+
+    def add_processing_log(self, log: ProcessingLog) -> None:
+        self.processing_logs.replace_one({"id": log.id}, log.to_dict(), upsert=True)
+
+    def list_processing_logs(self) -> list[ProcessingLog]:
+        cursor = self.processing_logs.find().sort("processed_at", -1)
+        return [ProcessingLog.from_dict(d) for d in cursor]
 
     def close(self) -> None:
         self.client.close()
