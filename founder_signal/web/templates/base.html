@@ -977,26 +977,49 @@
         grid-column: span 2;
       }
     }
-  </style>
 
-  /* ===== Landing Page Styles ===== */
-  .landing-hero {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: center;
-    padding: 4rem 1rem;
-    background: var(--color-surface-warm);
-    border-bottom: 1px solid var(--color-border-subtle);
-  }
-  .hero-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-  .hero-badge {
-    font-size: 1.5rem;
-  }
+    /* ===== Landing Page Styles ===== */
+    .container-landing {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    .container-landing .alert-container {
+      max-width: 1100px;
+      margin: 1.5rem auto 0;
+      padding: 0 1.5rem;
+    }
+
+    .landing-hero {
+      background: var(--color-surface-warm);
+      border-bottom: 1px solid var(--color-border-subtle);
+      padding: 5rem 1.5rem;
+    }
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 3.5rem;
+      align-items: center;
+    }
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: var(--color-brand-surface);
+      border: 1px solid var(--color-brand-border);
+      border-radius: var(--radius-md);
+      color: var(--color-brand);
+      font-size: 1.25rem;
+    }
   .hero-title {
     font-family: var(--font-serif);
     font-size: 3rem;
@@ -1047,6 +1070,7 @@
     overflow: hidden;
     font-family: var(--font-sans);
     font-size: 0.875rem;
+    box-shadow: 0 10px 25px -5px rgba(28, 25, 23, 0.06), 0 8px 10px -6px rgba(28, 25, 23, 0.04);
   }
   .preview-header {
     background: var(--color-brand);
@@ -1135,6 +1159,7 @@
   .step:hover,
   .feature:hover {
     border-color: var(--color-border);
+    transform: translateY(-2px);
   }
   .step-number {
     font-family: var(--font-serif);
@@ -1208,9 +1233,11 @@
 
   @media (max-width: 768px) {
     .landing-hero {
+      padding: 3rem 1.25rem;
+    }
+    .hero-inner {
       grid-template-columns: 1fr;
-      gap: 2rem;
-      padding: 3rem 1rem;
+      gap: 2.5rem;
     }
     .hero-title {
       font-size: 2.25rem;
@@ -1222,6 +1249,7 @@
       flex-direction: column;
     }
   }
+  </style>
 </head>
 <body>
   <header>
@@ -1241,7 +1269,7 @@
     </nav>
   </header>
 
-  <main class="container">
+  <main class="{% if request.endpoint == 'index' %}container-landing{% else %}container{% endif %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="alert-container" aria-live="polite">
