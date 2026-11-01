@@ -32,6 +32,48 @@ class Source:
 
 
 @dataclass
+class ProcessingLog:
+    """A record of a source file processed through the inbox watcher."""
+
+    id: str
+    filename: str
+    kind: str  # "email" | "transcript" | "voice-note" | "video"
+    source_id: Optional[str] = None
+    received_at: Optional[datetime] = None  # when the file appeared in the inbox
+    processed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    status: str = "ok"  # ok | needs_transcription | error
+    commitment_count: int = 0
+    error_message: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "filename": self.filename,
+            "kind": self.kind,
+            "source_id": self.source_id,
+            "received_at": self.received_at.isoformat() if self.received_at else None,
+            "processed_at": self.processed_at.isoformat(),
+            "status": self.status,
+            "commitment_count": self.commitment_count,
+            "error_message": self.error_message,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ProcessingLog":
+        return cls(
+            id=d["id"],
+            filename=d["filename"],
+            kind=d["kind"],
+            source_id=d.get("source_id"),
+            received_at=datetime.fromisoformat(d["received_at"]) if d.get("received_at") else None,
+            processed_at=datetime.fromisoformat(d["processed_at"]),
+            status=d.get("status", "ok"),
+            commitment_count=d.get("commitment_count", 0),
+            error_message=d.get("error_message"),
+        )
+
+
+@dataclass
 class Commitment:
     """A single extracted commitment with source evidence."""
 

@@ -23,7 +23,7 @@ from typing import Optional
 
 from .config import Config
 from .ledger import open_ledger
-from .models import Source, Commitment
+from .models import Source, Commitment, ProcessingLog
 from .extraction import extract, to_commitments
 from .reconciliation import reconcile
 from .briefing import generate_briefing
@@ -94,18 +94,30 @@ class InboxWatcher:
         self.inbox_path.mkdir(parents=True, exist_ok=True)
         self.processed_path.mkdir(parents=True, exist_ok=True)
 
+    def _file_received_at(self, file_path: Path) -> Optional[datetime]:
+        """Best-effort timestamp for when a file appeared in the inbox.
+
+        Uses the file's modification time as a proxy for "date received."
+        """
+        try:
+            return datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            return None
+
     # Text extensions that can be read directly for extraction.
     TEXT_EXTENSIONS = {".txt", ".md"}
     # Audio extensions recognized as voice notes (need transcription before extraction).
     AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".aac"}
+    # Video extensions recognized as meeting recordings (need transcription before extraction).
+    VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv"}
 
     def scan(self) -> int:
         """Scan the inbox for new files and process them.
 
         Text files (.txt, .md) are extracted immediately. Audio files
-        (.mp3, .wav, .m4a, .ogg, .aac) are recognized as voice notes and
-        moved to processed with a "transcription needed" note, since they
-        cannot be read as text without a transcription step.
+        (.mp3, .wav, .m4a, .ogg, .aac) and video files (.mp4, .mov, .avi, .mkv)
+        are recognized as voice notes / meeting recordings and transcribed
+        locally if possible before extraction.
 
         Returns the number of files processed.
         """
@@ -117,29 +129,66 @@ class InboxWatcher:
             if file_path.name.endswith(".done"):
                 continue
             ext = file_path.suffix.lower()
-            if ext not in self.TEXT_EXTENSIONS and ext not in self.AUDIO_EXTENSIONS:
+            if ext not in self.TEXT_EXTENSIONS and ext not in self.AUDIO_EXTENSIONS and ext not in self.VIDEO_EXTENSIONS:
                 continue
-            self.process_file(file_path)
-            processed += 1
+            try:
+                self.process_file(file_path)
+                processed += 1
+            except Exception as exc:  # noqa: BLE001
+                # One bad file must not stop the rest of the batch.
+                log = ProcessingLog(
+                    id=f"log:{file_path.name}:{int(datetime.now(timezone.utc).timestamp())}",
+                    filename=file_path.name,
+                    kind=ext.lstrip("."),
+                    received_at=self._file_received_at(file_path),
+                    status="error",
+                    error_message=str(exc),
+                )
+                try:
+                    self.ledger.add_processing_log(log)
+                except Exception:  # noqa: BLE001
+                    pass
+                print(
+                    f"[founder-signal] {file_path.name}: error processing: {exc}",
+                    file=sys.stderr,
+                )
         return processed
 
     def process_file(self, file_path: Path, account: Optional[str] = None) -> None:
         """Process a single inbox file through extraction, reconciliation, briefing."""
         ext = file_path.suffix.lower()
+        received_at = self._file_received_at(file_path)
 
-        # Audio files (voice notes): transcribe locally if possible, then
-        # extract commitments from the transcript like any other source.
-        if ext in self.AUDIO_EXTENSIONS:
+        def _record_log(status: str, source_id: Optional[str] = None,
+                        commitment_count: int = 0, error_message: Optional[str] = None) -> None:
+            log = ProcessingLog(
+                id=f"log:{file_path.name}:{int(datetime.now(timezone.utc).timestamp())}",
+                filename=file_path.name,
+                kind=ext.lstrip("."),
+                source_id=source_id,
+                received_at=received_at,
+                status=status,
+                commitment_count=commitment_count,
+                error_message=error_message,
+            )
+            try:
+                self.ledger.add_processing_log(log)
+            except Exception:  # noqa: BLE001
+                pass
+
+        # Audio files (voice notes) and video files (meeting recordings):
+        # transcribe locally if possible, then extract commitments from the
+        # transcript like any other source.
+        if ext in self.AUDIO_EXTENSIONS or ext in self.VIDEO_EXTENSIONS:
+            kind = "voice-note" if ext in self.AUDIO_EXTENSIONS else "video"
             transcript = _transcribe_audio(file_path)
             if transcript:
-                kind = "voice-note"
                 title = file_path.stem
                 source_id = (
                     f"inbox:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
                 )
                 source = Source(id=source_id, kind=kind, title=title, body=transcript)
 
-                # Run the Founder Signal skill (extraction) with per-account founder identity.
                 result = extract(
                     source,
                     use_llm=self.config.use_llm,
@@ -149,7 +198,6 @@ class InboxWatcher:
                 source.extractor = result.extractor
                 self.ledger.add_source(source)
 
-                # Convert to proposed commitments and reconcile.
                 proposed = to_commitments(result, source.id)
                 reconciliation = reconcile(
                     self.ledger,
@@ -157,11 +205,9 @@ class InboxWatcher:
                     within_days=self.config.briefing_coming_up_days,
                 )
 
-                # Add new commitments to the ledger (proposed; awaiting confirmation).
                 for c in reconciliation.new_commitments:
                     self.ledger.add_commitment(c)
 
-                # Stage proposed changes on existing commitments for human review
                 for issue in reconciliation.issues:
                     if issue.kind == "change" and issue.proposed is not None:
                         existing_c = self.ledger.get_commitment(issue.commitment_id)
@@ -174,8 +220,10 @@ class InboxWatcher:
                             }
                             self.ledger.update_commitment(existing_c)
 
+                _record_log("ok", source_id, len(reconciliation.new_commitments))
+                self._mark_done(file_path)
                 print(
-                    f"[founder-signal] {file_path.name}: transcribed voice note, "
+                    f"[founder-signal] {file_path.name}: transcribed {kind}, "
                     f"{len(reconciliation.new_commitments)} new commitment(s), "
                     f"{len(reconciliation.issues)} issue(s) needing review."
                 )
@@ -186,19 +234,18 @@ class InboxWatcher:
                 if dest.exists():
                     dest = needs_trans_dir / f"{file_path.stem}.{int(time.time())}{file_path.suffix}"
                 shutil.move(str(file_path), str(dest))
+                _record_log("needs_transcription", error_message="transcription required")
                 print(
                     f"[founder-signal] {file_path.name}: moved to needs_transcription/. "
                     f"Transcription is needed before commitments can be extracted. "
                     f"Install openai-whisper (pip install openai-whisper) for "
-                    f"automatic transcription, or add a transcript file / paste "
-                    f"the transcript text via the web app."
+                    f"automatic transcription."
                 )
-                return
-            self._mark_done(file_path)
             return
 
         body = file_path.read_text(encoding="utf-8", errors="replace")
         if not body.strip():
+            _record_log("ok", commitment_count=0)
             self._mark_done(file_path)
             return
 
@@ -207,22 +254,18 @@ class InboxWatcher:
         source_id = f"inbox:{kind}:{title}:{int(datetime.now(timezone.utc).timestamp())}"
         source = Source(id=source_id, kind=kind, title=title, body=body)
 
-        # Run the Founder Signal skill (extraction) with per-account founder identity.
         result = extract(source, use_llm=self.config.use_llm, config=self.config, account=account)
         source.extractor = result.extractor
         self.ledger.add_source(source)
 
-        # Convert to proposed commitments and reconcile.
         proposed = to_commitments(result, source.id)
         reconciliation = reconcile(
             self.ledger, proposed, within_days=self.config.briefing_coming_up_days
         )
 
-        # Add new commitments to the ledger (proposed; awaiting confirmation).
         for c in reconciliation.new_commitments:
             self.ledger.add_commitment(c)
 
-        # Stage proposed changes on existing commitments for human review
         for issue in reconciliation.issues:
             if issue.kind == "change" and issue.proposed is not None:
                 existing_c = self.ledger.get_commitment(issue.commitment_id)
@@ -235,7 +278,7 @@ class InboxWatcher:
                     }
                     self.ledger.update_commitment(existing_c)
 
-        # Mark file as processed.
+        _record_log("ok", source_id, len(reconciliation.new_commitments))
         self._mark_done(file_path)
 
         print(

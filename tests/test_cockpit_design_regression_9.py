@@ -90,12 +90,11 @@ def test_cockpit_editorial_design_routes():
         assert "source-preview-card" in html_detail
         assert "action" in html_detail
 
-        # 4. Ingest View
-        r_ingest = client.get("/ingest")
-        assert r_ingest.status_code == 200
-        html_ingest = r_ingest.text
-        assert "field-file-transcript" in html_ingest
-        assert "field-file-audio" in html_ingest
+        # 4. Processing Log View
+        r_log = client.get("/log")
+        assert r_log.status_code == 200
+        html_log = r_log.text
+        assert "processing-log" in html_log or "Processing Log" in html_log
     finally:
         if os.path.exists(db_path):
             os.unlink(db_path)

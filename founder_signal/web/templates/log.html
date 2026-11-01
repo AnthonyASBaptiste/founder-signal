@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div style="margin-bottom:1.75rem">
+    <h2 class="page-title">Processing Log</h2>
+    <p class="page-subtitle">History of all source materials processed through the inbox folder.</p>
+  </div>
+
+  {% if not logs %}
+    <div class="card" style="max-width:820px">
+      <p class="empty">No materials have been processed yet. Drop files into your inbox folder and run <code>python -m founder_signal.cli scan</code> to process them.</p>
+    </div>
+  {% else %}
+    <div class="card" style="max-width:100%">
+      <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+        <thead>
+          <tr style="text-align:left; border-bottom:2px solid var(--color-border)">
+            <th style="padding:0.75rem 0.5rem">Filename</th>
+            <th style="padding:0.75rem 0.5rem">Kind</th>
+            <th style="padding:0.75rem 0.5rem">Date Received</th>
+            <th style="padding:0.75rem 0.5rem">Date Processed</th>
+            <th style="padding:0.75rem 0.5rem">Status</th>
+            <th style="padding:0.75rem 0.5rem">Commitments</th>
+            <th style="padding:0.75rem 0.5rem">Source</th>
+            <th style="padding:0.75rem 0.5rem">Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+            <tr style="border-bottom:1px solid var(--color-border-subtle)">
+              <td style="padding:0.75rem 0.5rem; font-weight:500">{{ log.filename }}</td>
+              <td style="padding:0.75rem 0.5rem">{{ log.kind }}</td>
+              <td style="padding:0.75rem 0.5rem; color:var(--color-text-secondary)">{{ log.received_at[:10] if log.received_at else '—' }}</td>
+              <td style="padding:0.75rem 0.5rem; color:var(--color-text-secondary)">{{ log.processed_at[:16] if log.processed_at else '—' }}</td>
+              <td style="padding:0.75rem 0.5rem">
+                <span style="
+                  display:inline-block;
+                  padding:0.15rem 0.5rem;
+                  border-radius:999px;
+                  font-size:0.75rem;
+                  font-weight:600;
+                  {% if log.status == 'ok' %}color:var(--color-success); background:var(--color-success-surface);{% elif log.status == 'needs_transcription' %}color:var(--color-warning); background:var(--color-warning-surface);{% else %}color:var(--color-error); background:var(--color-error-surface);{% endif %}
+                ">{{ log.status }}</span>
+              </td>
+              <td style="padding:0.75rem 0.5rem">{{ log.commitment_count }}</td>
+              <td style="padding:0.75rem 0.5rem">
+                {% if log.source_id %}
+                  <a href="{{ url_for('commitment_detail', commitment_id=log.source_id) }}" style="color:var(--color-brand); text-decoration:none; font-size:0.8125rem">View source</a>
+                {% else %}
+                  <span style="color:var(--color-text-muted); font-size:0.8125rem">—</span>
+                {% endif %}
+              </td>
+              <td style="padding:0.75rem 0.5rem; color:var(--color-error); font-size:0.8125rem">{{ log.error_message or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <div style="margin-top:1.5rem">
+    <a href="{{ url_for('index') }}" class="btn btn-outline">← Back to Cockpit</a>
+  </div>
+{% endblock %}
