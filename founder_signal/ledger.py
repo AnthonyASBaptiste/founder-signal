@@ -23,6 +23,10 @@ class Ledger(ABC):
         ...
 
     @abstractmethod
+    def list_sources(self) -> list[Source]:
+        ...
+
+    @abstractmethod
     def add_commitment(self, commitment: Commitment) -> None:
         ...
 
@@ -153,6 +157,25 @@ class SQLiteLedger(Ledger):
         ).fetchone()
         if not row:
             return None
+        raw_row = dict(row)
+        return Source(
+            id=raw_row["id"],
+            kind=raw_row["kind"],
+            title=raw_row["title"],
+            body=raw_row["body"],
+            received_at=datetime.fromisoformat(raw_row["received_at"]) if raw_row.get("received_at") else None,
+            created_at=datetime.fromisoformat(raw_row["created_at"]),
+            extractor=raw_row.get("extractor"),
+        )
+
+    def list_sources(self) -> list[Source]:
+        rows = self.conn.execute(
+            "SELECT * FROM sources ORDER BY received_at IS NULL, received_at DESC, created_at DESC"
+        ).fetchall()
+        return [self._row_to_source(r) for r in rows]
+
+    @staticmethod
+    def _row_to_source(row: sqlite3.Row) -> Source:
         raw_row = dict(row)
         return Source(
             id=raw_row["id"],
@@ -344,6 +367,18 @@ class MongoLedger(Ledger):
             created_at=datetime.fromisoformat(doc["created_at"]),
             extractor=doc.get("extractor"),
         )
+
+    def list_sources(self) -> list[Source]:
+        cursor = self.sources.find().sort([("received_at", -1), ("created_at", -1)])
+        return [Source(
+            id=d["id"],
+            kind=d["kind"],
+            title=d["title"],
+            body=d["body"],
+            received_at=datetime.fromisoformat(d["received_at"]) if d.get("received_at") else None,
+            created_at=datetime.fromisoformat(d["created_at"]),
+            extractor=d.get("extractor"),
+        ) for d in cursor]
 
     def add_commitment(self, commitment: Commitment) -> None:
         self.commitments.replace_one({"id": commitment.id}, commitment.to_dict(), upsert=True)
