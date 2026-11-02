@@ -312,15 +312,21 @@ class MongoLedger(Ledger):
     def __init__(self, uri: str, database: str = "founder_signal"):
         from pymongo import MongoClient
 
-        self.client = MongoClient(uri)
+        self.client = MongoClient(uri, serverSelectionTimeoutMS=5000)
         self.db = self.client[database]
         self.sources = self.db["sources"]
         self.commitments = self.db["commitments"]
         self.processing_logs = self.db["processing_logs"]
-        self.commitments.create_index("source_id")
-        self.commitments.create_index("status")
-        self.commitments.create_index("due_date")
-        self.processing_logs.create_index("processed_at")
+        # Create indexes best-effort; don't block app startup if MongoDB is
+        # temporarily unreachable. Indexes are idempotent and will be created
+        # on the next successful connection.
+        try:
+            self.commitments.create_index("source_id")
+            self.commitments.create_index("status")
+            self.commitments.create_index("due_date")
+            self.processing_logs.create_index("processed_at")
+        except Exception:
+            pass
 
     def add_source(self, source: Source) -> None:
         self.sources.replace_one({"id": source.id}, source.to_dict(), upsert=True)
