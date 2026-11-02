@@ -1,6 +1,7 @@
 """Tests for the morning briefing."""
 
 import os, tempfile
+from datetime import datetime, timedelta, timezone
 
 from founder_signal.ledger import SQLiteLedger
 from founder_signal.models import Commitment, Source
@@ -16,14 +17,19 @@ def _tmp_ledger():
 def test_briefing_sections():
     ledger, path = _tmp_ledger()
     try:
+        today = datetime.now(timezone.utc).date()
+        today_str = today.isoformat()
+        coming_up_str = (today + timedelta(days=3)).isoformat()
+        delegated_str = (today + timedelta(days=4)).isoformat()
+
         source = Source(id="s1", kind="email", title="T", body="B")
         ledger.add_source(source)
         # Overdue/due today -> do now
-        ledger.add_commitment(Commitment(id="c1", source_id="s1", description="Due today", owner="me", due_date="2026-10-23", status="open"))
+        ledger.add_commitment(Commitment(id="c1", source_id="s1", description="Due today", owner="me", due_date=today_str, status="open"))
         # Coming up within 7 days
-        ledger.add_commitment(Commitment(id="c2", source_id="s1", description="Coming up", owner="me", due_date="2026-10-28", status="open"))
+        ledger.add_commitment(Commitment(id="c2", source_id="s1", description="Coming up", owner="me", due_date=coming_up_str, status="open"))
         # Waiting on someone (delegated)
-        ledger.add_commitment(Commitment(id="c3", source_id="s1", description="Delegated", owner="co-founder", due_date="2026-10-29", status="open"))
+        ledger.add_commitment(Commitment(id="c3", source_id="s1", description="Delegated", owner="co-founder", due_date=delegated_str, status="open"))
         # Missing detail
         ledger.add_commitment(Commitment(id="c4", source_id="s1", description="Vague", owner=None, due_date=None, status="open"))
 

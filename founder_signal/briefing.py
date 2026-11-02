@@ -51,7 +51,7 @@ def generate_briefing(
 
     Sections:
     - Do now: overdue or due today, open commitments.
-    - Coming up: due within `coming_up_days`, open.
+    - Coming up: due within coming_up_days= open.
     - Waiting on: open commitments with an owner other than "me"/"I"/founder (delegated).
     - Needs clarification: open commitments missing owner or due date.
     """

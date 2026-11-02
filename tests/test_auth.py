@@ -50,6 +50,18 @@ def test_login_failure_shows_error(monkeypatch):
     assert b"Invalid username or password" in resp.data
 
 
+# Regression: ISSUE-020 — Authenticated user accessing /login redirects to /dashboard
+# Value: protects=authenticated users visiting /login are redirected to /dashboard; fails_when=authenticated user is sent to /; why_new=tests/test_auth.py covers unauthenticated only; seam=none; no_claim=none beyond protects
+def test_authenticated_user_accessing_login_redirects_to_dashboard(monkeypatch):
+    client = next(_make_client())
+    # Sign in
+    client.post("/login", data={"username": "founder", "password": "secret"})
+    # Re-visiting /login while already signed in must redirect to cockpit dashboard
+    resp = client.get("/login")
+    assert resp.status_code == 302
+    assert "/dashboard" in resp.headers["Location"]
+
+
 def test_protected_route_redirects_to_login_when_unauthenticated(monkeypatch):
     client = next(_make_client())
     resp = client.get("/dashboard")

@@ -3,35 +3,37 @@
 {% block content %}
   <!-- Hero Section -->
   <section class="landing-hero" aria-label="Founder Signal Hero">
-    <div class="hero-content">
-      <span class="hero-badge" aria-hidden="true">✦</span>
-      <h1 class="hero-title">Founder Signal</h1>
-      <p class="hero-subtitle">
-        Extract commitments from your email, transcripts, and voice notes.
-        Reconcile changes. Never lose track of what you promised.
-      </p>
-      <div class="hero-actions">
-        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in to Cockpit</a>
-        <a href="#how-it-works" class="btn btn-outline">How It Works</a>
+    <div class="hero-inner">
+      <div class="hero-content">
+        <span class="hero-badge" aria-hidden="true">✦</span>
+        <h1 class="hero-title">Founder Signal</h1>
+        <p class="hero-subtitle">
+          Extract commitments from your email, transcripts, and voice notes.
+          Reconcile changes. Never lose track of what you promised.
+        </p>
+        <div class="hero-actions">
+          <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in to Cockpit</a>
+          <a href="#how-it-works" class="btn btn-outline">How It Works</a>
+        </div>
       </div>
-    </div>
-    <div class="hero-visual" aria-hidden="true">
-      <div class="cockpit-preview">
-        <div class="preview-header">Commitment Ledger</div>
-        <div class="preview-row">
-          <span class="preview-chip">Send the deck to Sarah</span>
-          <span class="preview-due">Due Oct 30</span>
-          <span class="preview-status status-open">Open</span>
-        </div>
-        <div class="preview-row">
-          <span class="preview-chip">Quarterly review delivery</span>
-          <span class="preview-due">Due Nov 6</span>
-          <span class="preview-status status-done">Done</span>
-        </div>
-        <div class="preview-row">
-          <span class="preview-chip">Reach out to lead investor</span>
-          <span class="preview-due">No date</span>
-          <span class="preview-status status-waiting">Waiting</span>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="cockpit-preview">
+          <div class="preview-header">Commitment Ledger</div>
+          <div class="preview-row">
+            <span class="preview-chip">Send the deck to Sarah</span>
+            <span class="preview-due">Due Oct 30</span>
+            <span class="preview-status status-open">Open</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-chip">Quarterly review delivery</span>
+            <span class="preview-due">Due Nov 6</span>
+            <span class="preview-status status-done">Done</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-chip">Reach out to lead investor</span>
+            <span class="preview-due">No date</span>
+            <span class="preview-status status-waiting">Waiting</span>
+          </div>
         </div>
       </div>
     </div>

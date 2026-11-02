@@ -95,7 +95,7 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
     - If identical to an existing open commitment -> duplicate issue (not added).
     - Otherwise -> added to new_commitments, with any issues flagged:
         * missing_detail: owner or due_date not stated
-        * approaching_deadline: due within `within_days`
+        * approaching_deadline: due within within_days
 
     Returns proposed changes; does not mutate the ledger.
     """

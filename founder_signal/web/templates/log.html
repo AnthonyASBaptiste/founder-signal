@@ -11,46 +11,41 @@
       <p class="empty">No materials have been processed yet. Drop files into your inbox folder and run <code>python -m founder_signal.cli scan</code> to process them.</p>
     </div>
   {% else %}
-    <div class="card" style="max-width:100%">
-      <table style="width:100%; border-collapse:collapse; font-size:0.875rem">
+    <div class="table-container">
+      <table>
         <thead>
-          <tr style="text-align:left; border-bottom:2px solid var(--color-border)">
-            <th style="padding:0.75rem 0.5rem">Filename</th>
-            <th style="padding:0.75rem 0.5rem">Kind</th>
-            <th style="padding:0.75rem 0.5rem">Date Received</th>
-            <th style="padding:0.75rem 0.5rem">Date Processed</th>
-            <th style="padding:0.75rem 0.5rem">Status</th>
-            <th style="padding:0.75rem 0.5rem">Commitments</th>
-            <th style="padding:0.75rem 0.5rem">Source</th>
-            <th style="padding:0.75rem 0.5rem">Error</th>
+          <tr>
+            <th>Filename</th>
+            <th>Kind</th>
+            <th>Date Received</th>
+            <th>Date Processed</th>
+            <th>Status</th>
+            <th>Commitments</th>
+            <th>Source ID</th>
+            <th>Error</th>
           </tr>
         </thead>
         <tbody>
           {% for log in logs %}
-            <tr style="border-bottom:1px solid var(--color-border-subtle)">
-              <td style="padding:0.75rem 0.5rem; font-weight:500">{{ log.filename }}</td>
-              <td style="padding:0.75rem 0.5rem">{{ log.kind }}</td>
-              <td style="padding:0.75rem 0.5rem; color:var(--color-text-secondary)">{{ log.received_at[:10] if log.received_at else '—' }}</td>
-              <td style="padding:0.75rem 0.5rem; color:var(--color-text-secondary)">{{ log.processed_at[:16] if log.processed_at else '—' }}</td>
-              <td style="padding:0.75rem 0.5rem">
-                <span style="
-                  display:inline-block;
-                  padding:0.15rem 0.5rem;
-                  border-radius:999px;
-                  font-size:0.75rem;
-                  font-weight:600;
-                  {% if log.status == 'ok' %}color:var(--color-success); background:var(--color-success-surface);{% elif log.status == 'needs_transcription' %}color:var(--color-warning); background:var(--color-warning-surface);{% else %}color:var(--color-error); background:var(--color-error-surface);{% endif %}
+            <tr>
+              <td style="font-weight:500">{{ log.filename }}</td>
+              <td><span class="filter-pill" style="padding:0.15rem 0.6rem; font-size:0.75rem">{{ log.kind }}</span></td>
+              <td style="color:var(--color-text-secondary); font-variant-numeric:tabular-nums">{{ (log.received_at|string)[:10] if log.received_at else '—' }}</td>
+              <td style="color:var(--color-text-secondary); font-variant-numeric:tabular-nums">{{ (log.processed_at|string)[:16] if log.processed_at else '—' }}</td>
+              <td>
+                <span class="badge" style="
+                  {% if log.status == 'ok' %}color:var(--color-success); background:var(--color-success-surface); border:1px solid #bbf7d0;{% elif log.status == 'needs_transcription' %}color:var(--color-warning); background:var(--color-warning-surface); border:1px solid #fef3c7;{% else %}color:var(--color-error); background:var(--color-error-surface); border:1px solid #fecaca;{% endif %}
                 ">{{ log.status }}</span>
               </td>
-              <td style="padding:0.75rem 0.5rem">{{ log.commitment_count }}</td>
-              <td style="padding:0.75rem 0.5rem">
+              <td style="font-variant-numeric:tabular-nums">{{ log.commitment_count }}</td>
+              <td>
                 {% if log.source_id %}
-                  <a href="{{ url_for('commitment_detail', commitment_id=log.source_id) }}" style="color:var(--color-brand); text-decoration:none; font-size:0.8125rem">View source</a>
+                  <code style="font-size:0.8rem; color:var(--color-brand)">#{{ log.source_id }}</code>
                 {% else %}
                   <span style="color:var(--color-text-muted); font-size:0.8125rem">—</span>
                 {% endif %}
               </td>
-              <td style="padding:0.75rem 0.5rem; color:var(--color-error); font-size:0.8125rem">{{ log.error_message or '—' }}</td>
+              <td style="color:var(--color-error); font-size:0.8125rem">{{ log.error_message or '—' }}</td>
             </tr>
           {% endfor %}
         </tbody>
