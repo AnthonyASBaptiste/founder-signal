@@ -93,8 +93,37 @@ def create_app(config: Config | None = None) -> Flask:
         try:
             briefing = generate_briefing(ledger, coming_up_days=config.briefing_coming_up_days)
             commitments = ledger.list_commitments()
+            sources = {s.id: s for s in ledger.list_sources()}
         finally:
             ledger.close()
+
+        # Group commitments by source_id for topic/email grouping
+        groups = []
+        ungrouped = []
+        for c in commitments:
+            src = sources.get(c.source_id)
+            if src:
+                groups.append((src, c))
+            else:
+                ungrouped.append(c)
+
+        # Build ordered list of (source, [commitments]) tuples
+        source_groups: dict[str, tuple[Source, list[Commitment]]] = {}
+        for src, c in groups:
+            if src.id not in source_groups:
+                source_groups[src.id] = (src, [])
+            source_groups[src.id][1].append(c)
+
+        # Sort groups by source received_at (newest first), then by commitment due date
+        ordered_groups = sorted(
+            source_groups.values(),
+            key=lambda item: (
+                item[0].received_at.isoformat() if item[0].received_at else "",
+                item[0].created_at.isoformat(),
+            ),
+            reverse=True,
+        )
+
         inbox_path = Path(os.path.expanduser(config.inbox_folder))
         needs_trans_dir = inbox_path / "needs_transcription"
         needs_transcription_count = (
@@ -106,6 +135,8 @@ def create_app(config: Config | None = None) -> Flask:
             "index.html",
             briefing=briefing,
             commitments=commitments,
+            source_groups=ordered_groups,
+            ungrouped_commitments=ungrouped,
             needs_transcription_count=needs_transcription_count,
         )
 

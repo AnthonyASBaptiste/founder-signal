@@ -994,6 +994,72 @@
       }
     }
 
+    /* Source Group Headers (email/topic grouping) */
+    .source-group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1.1rem;
+      background: var(--color-surface-warm);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    .source-group-header:hover {
+      background: var(--color-border-subtle);
+    }
+    .source-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    .source-group-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .source-group-title {
+      margin: 0 0 0.25rem 0;
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--color-text);
+      line-height: 1.3;
+    }
+    .source-group-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
+    }
+    .source-group-summary {
+      margin-top: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+      max-width: 60ch;
+    }
+    .toggle-group {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0;
+    }
+    .source-group-row {
+      background: transparent;
+    }
+    .filtered-out {
+      display: none !important;
+    }
+  </style>
+
     /* ===== Landing Page Styles ===== */
     .container-landing {
       width: 100%;

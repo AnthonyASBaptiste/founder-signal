@@ -106,7 +106,7 @@
       <a href="{{ url_for('processing_log') }}" class="btn btn-sm btn-outline">+ Processing Log</a>
     </div>
 
-    {% if commitments %}
+    {% if source_groups or ungrouped_commitments %}
       <search class="filter-bar" aria-label="Filter commitments by status">
         <button type="button" class="filter-pill active" data-filter="all" onclick="filterCommitments('all')">
           All <span class="pill-count">{{ commitments|length }}</span>
@@ -140,8 +140,32 @@
             </tr>
           </thead>
           <tbody>
-            {% for c in commitments %}
+            {% for source, group_commitments in source_groups %}
+            <tr class="source-group-row" data-source-id="{{ source.id }}" data-group-open="true">
+              <td colspan="5">
+                <div class="source-group-header">
+                  <span class="source-icon" aria-hidden="true">
+                    {% if 'email' in source.id %}✉️{% elif 'transcript' in source.id or 'voice' in source.id %}🎙️{% else %}📄{% endif %}
+                  </span>
+                  <div class="source-group-info">
+                    <h4 class="source-group-title">{{ source.title }}</h4>
+                    <div class="source-group-meta">
+                      <span class="source-date">
+                        {% if source.received_at %}{{ source.received_at.strftime('%Y-%m-%d') }}{% else %}{{ source.created_at.strftime('%Y-%m-%d') }}{% endif %}
+                      </span>
+                      <span class="source-kind" style="font-size:0.75rem; opacity:0.7; font-family:var(--font-mono)">{{ source.kind }}</span>
+                    </div>
+                    {% if source.body %}
+                    <div class="source-group-summary">{{ source.body[:300] }}{% if source.body|length > 300 %}...{% endif %}</div>
+                    {% endif %}
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline toggle-group" onclick="toggleGroup('{{ source.id }}')" aria-label="Toggle {{ source.title }}">−</button>
+                </div>
+              </td>
+            </tr>
+            {% for c in group_commitments %}
             <tr data-status="{{ c.status }}" 
+                data-source-id="{{ source.id }}"
                 data-do-now="{% if c in briefing.do_now %}true{% else %}false{% endif %}" 
                 data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
               <td>
@@ -210,6 +234,94 @@
               </td>
             </tr>
             {% endfor %}
+            {% endfor %}
+
+            {% if ungrouped_commitments %}
+            <tr class="source-group-row" data-source-id="ungrouped" data-group-open="true">
+              <td colspan="5">
+                <div class="source-group-header">
+                  <span class="source-icon" aria-hidden="true">📄</span>
+                  <div class="source-group-info">
+                    <h4 class="source-group-title">Unattributed Commitments</h4>
+                    <div class="source-group-meta">
+                      <span class="source-kind" style="font-size:0.75rem; opacity:0.7; font-family:var(--font-mono)">no source</span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% for c in ungrouped_commitments %}
+            <tr data-status="{{ c.status }}" 
+                data-source-id="ungrouped"
+                data-do-now="{% if c in briefing.do_now %}true{% else %}false{% endif %}" 
+                data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
+              <td>
+                <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
+                  {{ c.description }}
+                  {% if c.pending_change %}
+                    <span class="badge badge-proposal">Proposed Change</span>
+                  {% endif %}
+                </div>
+                <div class="evidence-block">
+                  <span class="source-chip" title="Source ID: {{ c.source_id }}">
+                    {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Transcript{% else %}📄 Source{% endif %}
+                    <span style="opacity:0.75; font-family:var(--font-mono); font-weight:normal; font-size:0.7rem">#{{ c.source_id.split('-')[-1][:6] if '-' in c.source_id else c.source_id[:6] }}</span>
+                  </span>
+                  {% if c.evidence %}
+                    <details class="evidence-disclosure">
+                      <summary><span>“ Source Quote</span></summary>
+                      <blockquote>{{ c.evidence }}</blockquote>
+                    </details>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                {% if c.owner %}
+                  <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
+                {% else %}
+                  <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if c in briefing.do_now %}
+                  <span class="due-pill due-pill-urgent" title="Immediate action required">⚡ {{ c.due_date or 'Due today' }}</span>
+                {% elif c.due_date %}
+                  <span class="due-pill">{{ c.due_date }}</span>
+                {% else %}
+                  <span style="color:var(--color-text-muted); font-size:0.825rem; font-style:italic">No date</span>
+                {% endif %}
+              </td>
+              <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+              <td>
+                <div class="actions-group">
+                  {% if c.pending_change %}
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-review">Review Change</a>
+                  {% endif %}
+                  {% if c.status == 'open' %}
+                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
+                      <input type="hidden" name="status" value="done">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                      <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
+                    </form>
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
+                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
+                      <input type="hidden" name="status" value="ignore">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                      <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
+                    </form>
+                  {% elif c.status in ('done', 'ignore') %}
+                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
+                      <input type="hidden" name="status" value="open">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                      <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
+                    </form>
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
           </tbody>
         </table>
       </div>
@@ -236,6 +348,19 @@
           if (emptyMsg) {
             emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
           }
+        }
+
+        function toggleGroup(sourceId) {
+          const header = document.querySelector(`tr.source-group-row[data-source-id="${sourceId}"]`);
+          const isOpen = header && header.dataset.groupOpen === 'true';
+          header.dataset.groupOpen = isOpen ? 'false' : 'true';
+          const toggleBtn = header.querySelector('.toggle-group');
+          if (toggleBtn) toggleBtn.textContent = isOpen ? '+' : '−';
+          
+          const commitmentRows = document.querySelectorAll(`tr[data-source-id="${sourceId}"]:not(.source-group-row)`);
+          commitmentRows.forEach(row => {
+            row.classList.toggle('filtered-out', !isOpen);
+          });
         }
       </script>
     {% else %}
