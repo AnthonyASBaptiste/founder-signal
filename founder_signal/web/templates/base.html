@@ -903,7 +903,7 @@
       font-size: 0.825rem;
     }
 
-    form label {
+    form label:not(.checkbox-label):not(.radio-label) {
       display: block;
       font-size: 0.825rem;
       font-weight: 600;
@@ -911,6 +911,18 @@
       letter-spacing: 0.04em;
       margin-bottom: 0.4rem;
       color: var(--color-text-secondary);
+    }
+    label.checkbox-label, label.radio-label, .form-check-label,
+    label:has(input[type="checkbox"]), label:has(input[type="radio"]) {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.9rem;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--color-text);
+      cursor: pointer;
     }
     textarea, input[type="text"], input[type="date"], select {
       width: 100%;

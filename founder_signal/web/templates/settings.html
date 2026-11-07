@@ -76,19 +76,19 @@
 
       <!-- Scan Rules & Direct Address -->
       <div style="padding-top: 1rem; border-top: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 0.75rem;">
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
           <input type="checkbox" name="only_scan_vip" value="true" {% if settings.get('only_scan_vip', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
-          <strong>Only scan these senders</strong> (drops incoming marketing, unsolicited sales, and cold emails)
+          <strong>Only scan these senders</strong> <span style="color: var(--color-text-secondary);">(drops incoming marketing, unsolicited sales, and cold emails)</span>
         </label>
 
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
           <input type="checkbox" name="include_directly_addressed" value="true" {% if settings.get('include_directly_addressed', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
-          <strong>Also include messages I'm directly addressed on</strong> (captures personal emails directed to you even if not in the VIP list)
+          <strong>Also include messages I'm directly addressed on</strong> <span style="color: var(--color-text-secondary);">(captures personal emails directed to you even if not in the VIP list)</span>
         </label>
 
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
           <input type="checkbox" name="auto_ignore_bulk" value="true" {% if settings.get('auto_ignore_bulk', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
-          <strong>Auto-ignore bulk and automated mail</strong> (automatically drops <code>noreply@</code> and bulk automated mail)
+          <strong>Auto-ignore bulk and automated mail</strong> <span style="color: var(--color-text-secondary);">(automatically drops <code>noreply@</code> and bulk automated mail)</span>
         </label>
       </div>
 
@@ -162,14 +162,14 @@
       </div>
 
       <div style="padding-top: 0.85rem; border-top: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.25rem;">
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
           <input type="checkbox" name="digest_enabled" value="true" {% if settings.get('digest_enabled', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
           <strong>Enable scheduled morning executive briefing</strong>
         </label>
 
-        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
           <input type="checkbox" name="digest_threshold_only" value="true" {% if settings.get('digest_threshold_only', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
-          <strong>Threshold-only digest:</strong> only deliver digest when actions require attention (e.g. Do Now &gt; 0 or Proposed Changes &gt; 0)
+          <span><strong>Threshold-only digest:</strong> only deliver digest when actions require attention (e.g. Do Now &gt; 0 or Proposed Changes &gt; 0)</span>
         </label>
       </div>
 
