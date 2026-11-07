@@ -10,8 +10,6 @@
   </div>
 
   <form method="POST" action="{{ url_for('settings_view') }}" style="display: flex; flex-direction: column; gap: 2rem;">
-    <input type="hidden" name="action" value="save">
-
     <!-- Section 1: Who Matters (Item 1) -->
     <section class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
       <div style="margin-bottom: 1.25rem;">
@@ -174,7 +172,7 @@
       </div>
 
       <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-        <button type="submit" class="btn" style="background: var(--color-brand); color: #fff; padding: 0.6rem 1.25rem; border-radius: var(--radius-md); font-weight: 600; border: none; cursor: pointer;">
+        <button type="submit" name="action" value="save" class="btn" style="background: var(--color-brand); color: #fff; padding: 0.6rem 1.25rem; border-radius: var(--radius-md); font-weight: 600; border: none; cursor: pointer;">
           Save Settings
         </button>
         <button type="submit" name="action" value="test_digest" class="btn btn-outline" style="background: transparent; color: var(--color-text); border: 1px solid var(--color-border); padding: 0.6rem 1.15rem; border-radius: var(--radius-md); font-weight: 500; cursor: pointer;">

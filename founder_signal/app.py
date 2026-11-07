@@ -363,7 +363,10 @@ def create_app(config: Config | None = None) -> Flask:
         ledger = open_ledger(config)
         try:
             ledger.reset_excluded_count()
-            return {"success": True, "excluded_count": 0}
+            if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return {"success": True, "excluded_count": 0}
+            flash("Excluded message counter reset to 0.", "info")
+            return redirect(url_for("settings_view"))
         finally:
             ledger.close()
 
@@ -436,7 +439,8 @@ def create_app(config: Config | None = None) -> Flask:
         try:
             settings = ledger.get_settings()
             if request.method == "POST":
-                action = request.form.get("action")
+                actions = request.form.getlist("action")
+                action = actions[-1] if actions else "save"
                 if action == "save":
                     vip_emails = [e.strip().lower() for e in request.form.get("vip_emails", "").splitlines() if e.strip()]
                     vip_domains = [d.strip().lower().lstrip("@") for d in request.form.get("vip_domains", "").splitlines() if d.strip()]
