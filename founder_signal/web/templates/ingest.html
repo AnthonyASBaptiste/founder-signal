@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="ingest-container" style="max-width: 760px; margin: 2rem auto; padding: 0 1.5rem;">
+  <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1rem;">
+    <h2 style="font-family: var(--font-serif); font-size: 1.85rem; margin: 0 0 0.5rem 0; color: var(--color-text);">Ingest Material</h2>
+    <p style="color: var(--color-text-secondary); margin: 0; font-size: 0.95rem;">
+      Upload voice notes, meeting transcripts, or paste correspondence. Founder Signal transcribes audio locally and extracts commitments into your cockpit.
+    </p>
+  </div>
+
+  <form method="POST" action="{{ url_for('ingest') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.75rem;">
+    <!-- Drag-and-Drop File Upload Card -->
+    <div class="card" style="background: var(--color-surface); border: 2px dashed var(--color-brand-border); border-radius: var(--radius-lg); padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: background 0.2s ease;" onclick="document.getElementById('file-input').click();" id="drop-zone">
+      <div style="font-size: 2.2rem; margin-bottom: 0.75rem;">🎙️ 📄</div>
+      <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin: 0 0 0.5rem 0; color: var(--color-text);">
+        Drop a Voice Note or Document Here
+      </h3>
+      <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0 0 1rem 0;">
+        Supports voice notes (<code>.ogg</code>, <code>.mp3</code>, <code>.m4a</code>, <code>.wav</code>), PDFs (<code>.pdf</code>), or transcripts (<code>.txt</code>, <code>.md</code>)
+      </p>
+      <input type="file" id="file-input" name="file" accept=".ogg,.mp3,.wav,.m4a,.aac,.pdf,.txt,.md" style="display: none;" onchange="updateFileName(this);">
+      <button type="button" class="btn btn-outline" style="background: transparent; color: var(--color-brand); border: 1px solid var(--color-brand); padding: 0.45rem 1.1rem; border-radius: var(--radius-md); font-weight: 600; cursor: pointer;">
+        Browse Files
+      </button>
+      <div id="file-selected" style="margin-top: 0.85rem; font-weight: 600; color: var(--color-brand); display: none;"></div>
+    </div>
+
+    <!-- Title & Direct Paste Section -->
+    <div class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem;">
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          Title / Context <span style="font-weight: normal; color: var(--color-text-muted);">(optional)</span>
+        </label>
+        <input type="text" name="title" placeholder="e.g. Call with Tishana, WhatsApp Voice Memo" style="width: 100%; font-size: 0.9rem; padding: 0.6rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+      </div>
+
+      <div>
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          Or Paste Text Directly
+        </label>
+        <textarea name="body" rows="6" placeholder="Paste email text, meeting notes, or voice note transcript here..." style="width: 100%; font-size: 0.875rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;"></textarea>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <button type="submit" id="submit-btn" class="btn" style="background: var(--color-brand); color: #fff; padding: 0.7rem 1.5rem; border-radius: var(--radius-md); font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
+        <span>Process & Extract Commitments</span>
+      </button>
+      <a href="{{ url_for('dashboard') }}" style="color: var(--color-text-secondary); text-decoration: none; font-size: 0.9rem;">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function updateFileName(input) {
+  const display = document.getElementById('file-selected');
+  if (input.files && input.files[0]) {
+    display.textContent = "Selected: " + input.files[0].name;
+    display.style.display = "block";
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.style.background = "var(--color-brand-surface)";
+    dropZone.style.borderColor = "var(--color-brand)";
+  }
+}
+
+// Drag & drop highlight
+const dropZone = document.getElementById('drop-zone');
+['dragenter', 'dragover'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.background = "var(--color-brand-surface)";
+  }, false);
+});
+['dragleave', 'drop'].forEach(eventName => {
+  dropZone.addEventListener(eventName, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.background = "var(--color-surface)";
+  }, false);
+});
+dropZone.addEventListener('drop', (e) => {
+  const dt = e.dataTransfer;
+  const files = dt.files;
+  if (files.length) {
+    document.getElementById('file-input').files = files;
+    updateFileName(document.getElementById('file-input'));
+  }
+});
+
+// Show processing state on submit
+document.querySelector('form').addEventListener('submit', function() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="display:inline-block; animation: spin 1s linear infinite;">⏳</span> Processing... (transcribing / extracting)';
+});
+</script>
+{% endblock %}

@@ -131,5 +131,8 @@ def init_app(app) -> None:
             "index",
         ) or (request.endpoint and request.endpoint.startswith("auth.")):
             return
+        if _admin_user() is None:
+            # When admin credentials are not set in environment (local dev mode), bypass login
+            return
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login", next=request.path))

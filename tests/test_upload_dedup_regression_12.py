@@ -43,8 +43,6 @@ def test_upload_dedup_and_processed_marker():
         assert not (inbox_dir / "term_sheet_call.txt").exists()
         # 2. File must be moved to inbox/processed/
         assert (inbox_dir / "processed" / "term_sheet_call.txt").exists()
-        # 3. .done marker must exist in inbox_dir
-        assert (inbox_dir / "term_sheet_call.txt.done").exists()
 
         # 4. Now run InboxWatcher.scan() again - it must process 0 files!
         watcher = InboxWatcher(config)

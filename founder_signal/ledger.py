@@ -4,11 +4,71 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any
 
 from .models import Commitment, ProcessingLog, Source
+
+DEFAULT_SETTINGS = {
+    # 1. VIP People & Ingestion Criteria
+    "vip_people": [
+        {"name": "Tishana Simon", "role": "co-founder", "email": "tishana@research-navigator.ai"},
+        {"name": "Tishana Simon (Alt)", "role": "co-founder", "email": "dm.businesstt@gmail.com"},
+        {"name": "Keneisha Browne", "role": "mentor", "email": "keneisha_browne@hotmail.com"},
+        {"name": "Point Lisas Nitrogen (PLNL)", "role": "key partner", "domain": "plnl.co.tt"},
+    ],
+    "vip_emails": [
+        "tishana@research-navigator.ai",
+        "dm.businesstt@gmail.com",
+        "keneisha_browne@hotmail.com",
+    ],
+    "vip_domains": [
+        "plnl.co.tt",
+    ],
+    "vip_keywords": [
+        "Future Caribbean",
+        "Caribbean Dragons",
+        "Omni Caribbean",
+        "futurecaribbean",
+        "caribbeandragons",
+        "omnicaribbean",
+    ],
+    "only_scan_vip": True,
+    "include_directly_addressed": False,
+    "founder_email": "",
+    "auto_ignore_bulk": True,
+    "excluded_count": 0,
+
+    # 5. Digest & Schedule Tuning
+    "digest_enabled": True,
+    "digest_time": "08:00",
+    "digest_threshold_only": True,
+    "due_soon_days": 3,
+    "check_interval_mins": 15,
+    "discord_alerts_target": "discord:alerts-and-logs",
+    "app_url": "https://founder-signal.builtbyanthony.tech",
+
+    # 6. Learned Rules & Exclusions
+    "suggested_rules": [],
+    "dismissal_counts": {},
+    "excluded_senders": [],
+    "excluded_domains": [],
+}
+
+_SHARED_MONGO_CLIENT = None
+
+
+def get_shared_mongo_client(uri: str):
+    """Reuse a single MongoClient to preserve connection pools and eliminate SSL/TLS reconnect latency."""
+    global _SHARED_MONGO_CLIENT
+    if _SHARED_MONGO_CLIENT is None:
+        from pymongo import MongoClient
+
+        _SHARED_MONGO_CLIENT = MongoClient(uri, serverSelectionTimeoutMS=5000, maxPoolSize=50)
+    return _SHARED_MONGO_CLIENT
+
 
 
 class Ledger(ABC):
@@ -55,8 +115,98 @@ class Ledger(ABC):
         ...
 
     @abstractmethod
+    def get_settings(self) -> dict:
+        ...
+
+    @abstractmethod
+    def update_settings(self, settings: dict) -> None:
+        ...
+
+    @abstractmethod
+    def has_processed_file(self, filename: str) -> bool:
+        ...
+
+    @abstractmethod
+    def clear_ledger(self) -> None:
+        ...
+
+    @abstractmethod
     def close(self) -> None:
         ...
+
+    def increment_excluded_count(self, n: int = 1) -> int:
+        """Increment count of messages filtered out for predictable reporting."""
+        settings = self.get_settings()
+        new_count = settings.get("excluded_count", 0) + n
+        settings["excluded_count"] = new_count
+        self.update_settings(settings)
+        return new_count
+
+    def reset_excluded_count(self) -> None:
+        """Reset excluded message count."""
+        settings = self.get_settings()
+        settings["excluded_count"] = 0
+        self.update_settings(settings)
+
+    def record_dismissal(self, pattern: str, title: Optional[str] = None) -> Optional[dict]:
+        """Record user dismissal (e.g. marking ignore) for a sender/domain and suggest rules when repeated."""
+        if not pattern or not pattern.strip():
+            return None
+        clean_p = pattern.lower().strip()
+        settings = self.get_settings()
+        counts = settings.setdefault("dismissal_counts", {})
+        counts[clean_p] = counts.get(clean_p, 0) + 1
+
+        new_rule = None
+        # Threshold: 2 dismissals suggests a filter rule for user approval
+        if counts[clean_p] >= 2:
+            excluded = set(settings.get("excluded_senders", []) + settings.get("excluded_domains", []))
+            rules = settings.setdefault("suggested_rules", [])
+            already_suggested = any(r.get("pattern") == clean_p and r.get("status") in ("pending", "accepted") for r in rules)
+            if clean_p not in excluded and not already_suggested:
+                rule_type = "exclude_sender" if "@" in clean_p else "exclude_domain"
+                new_rule = {
+                    "id": f"rule_{uuid.uuid4().hex[:8]}",
+                    "pattern": clean_p,
+                    "type": rule_type,
+                    "reason": f"You ignored {counts[clean_p]} commitments associated with {clean_p}.",
+                    "status": "pending",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                }
+                rules.append(new_rule)
+        self.update_settings(settings)
+        return new_rule
+
+    def accept_suggested_rule(self, rule_id: str) -> bool:
+        """Accept a suggested exclusion rule."""
+        settings = self.get_settings()
+        rules = settings.get("suggested_rules", [])
+        for r in rules:
+            if r.get("id") == rule_id and r.get("status") == "pending":
+                r["status"] = "accepted"
+                pattern = r.get("pattern", "")
+                if "@" in pattern:
+                    ex = settings.setdefault("excluded_senders", [])
+                    if pattern not in ex:
+                        ex.append(pattern)
+                else:
+                    ex = settings.setdefault("excluded_domains", [])
+                    if pattern not in ex:
+                        ex.append(pattern)
+                self.update_settings(settings)
+                return True
+        return False
+
+    def dismiss_suggested_rule(self, rule_id: str) -> bool:
+        """Dismiss a suggested rule without applying it."""
+        settings = self.get_settings()
+        rules = settings.get("suggested_rules", [])
+        for r in rules:
+            if r.get("id") == rule_id and r.get("status") == "pending":
+                r["status"] = "dismissed"
+                self.update_settings(settings)
+                return True
+        return False
 
 
 class SQLiteLedger(Ledger):
@@ -116,6 +266,10 @@ class SQLiteLedger(Ledger):
                 error_message TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_processing_log_processed_at ON processing_log(processed_at);
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """
         )
         # Migration: add new columns to existing databases
@@ -288,6 +442,38 @@ class SQLiteLedger(Ledger):
         ).fetchall()
         return [self._row_to_processing_log(r) for r in rows]
 
+    def get_settings(self) -> dict:
+        row = self.conn.execute("SELECT value FROM settings WHERE key = 'app_settings'").fetchone()
+        if not row:
+            settings = dict(DEFAULT_SETTINGS)
+            self.update_settings(settings)
+            return settings
+        try:
+            stored = json.loads(row["value"])
+            res = dict(DEFAULT_SETTINGS)
+            res.update(stored)
+            return res
+        except Exception:
+            return dict(DEFAULT_SETTINGS)
+
+    def update_settings(self, settings: dict) -> None:
+        val = json.dumps(settings)
+        self.conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('app_settings', ?)", (val,))
+        self.conn.commit()
+
+    def has_processed_file(self, filename: str) -> bool:
+        row = self.conn.execute(
+            "SELECT 1 FROM processing_log WHERE filename = ? AND status = 'ok' LIMIT 1",
+            (filename,),
+        ).fetchone()
+        return row is not None
+
+    def clear_ledger(self) -> None:
+        self.conn.execute("DELETE FROM commitments")
+        self.conn.execute("DELETE FROM sources")
+        self.conn.execute("DELETE FROM processing_log")
+        self.conn.commit()
+
     def close(self) -> None:
         self.conn.close()
 
@@ -332,14 +518,18 @@ class SQLiteLedger(Ledger):
 class MongoLedger(Ledger):
     """MongoDB Atlas-backed ledger."""
 
-    def __init__(self, uri: str, database: str = "founder_signal"):
-        from pymongo import MongoClient
-
-        self.client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+    def __init__(self, uri: str, database: str = "founder_signal", client: Optional[Any] = None):
+        if client is not None:
+            self.client = client
+            self._shared = False
+        else:
+            self.client = get_shared_mongo_client(uri)
+            self._shared = True
         self.db = self.client[database]
         self.sources = self.db["sources"]
         self.commitments = self.db["commitments"]
         self.processing_logs = self.db["processing_logs"]
+        self.settings = self.db["settings"]
         # Create indexes best-effort; don't block app startup if MongoDB is
         # temporarily unreachable. Indexes are idempotent and will be created
         # on the next successful connection.
@@ -348,6 +538,7 @@ class MongoLedger(Ledger):
             self.commitments.create_index("status")
             self.commitments.create_index("due_date")
             self.processing_logs.create_index("processed_at")
+            self.processing_logs.create_index("filename")
         except Exception:
             pass
 
@@ -412,8 +603,34 @@ class MongoLedger(Ledger):
         cursor = self.processing_logs.find().sort("processed_at", -1)
         return [ProcessingLog.from_dict(d) for d in cursor]
 
+    def get_settings(self) -> dict:
+        doc = self.settings.find_one({"_id": "app_settings"})
+        if not doc:
+            settings = dict(DEFAULT_SETTINGS)
+            self.update_settings(settings)
+            return settings
+        res = dict(DEFAULT_SETTINGS)
+        for k, v in doc.items():
+            if k != "_id":
+                res[k] = v
+        return res
+
+    def update_settings(self, settings: dict) -> None:
+        to_save = dict(settings)
+        to_save["_id"] = "app_settings"
+        self.settings.replace_one({"_id": "app_settings"}, to_save, upsert=True)
+
+    def has_processed_file(self, filename: str) -> bool:
+        return self.processing_logs.find_one({"filename": filename, "status": "ok"}) is not None
+
+    def clear_ledger(self) -> None:
+        self.commitments.delete_many({})
+        self.sources.delete_many({})
+        self.processing_logs.delete_many({})
+
     def close(self) -> None:
-        self.client.close()
+        if not getattr(self, "_shared", False):
+            self.client.close()
 
 
 def open_ledger(config) -> Ledger:
