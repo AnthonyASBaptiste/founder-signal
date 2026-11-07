@@ -1348,11 +1348,15 @@
       <h1>Founder Signal</h1>
     </a>
     <nav aria-label="Main Navigation">
-      {% if current_user.is_authenticated %}
+      {% if current_user.is_authenticated or not config.fs_admin_user %}
         <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Cockpit</a>
+        <a href="{{ url_for('ingest') }}" class="{% if request.endpoint == 'ingest' %}active{% endif %}">Ingest</a>
         <a href="{{ url_for('briefing_view') }}" class="{% if request.endpoint == 'briefing_view' %}active{% endif %}">Briefing</a>
+        <a href="{{ url_for('settings_view') }}" class="{% if request.endpoint == 'settings_view' %}active{% endif %}">Settings</a>
         <a href="{{ url_for('processing_log') }}" class="{% if request.endpoint == 'processing_log' %}active{% endif %}">Processing Log</a>
-        <a href="{{ url_for('auth.logout') }}" class="btn-outline">Sign out</a>
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('auth.logout') }}" class="btn-outline">Sign out</a>
+        {% endif %}
       {% else %}
         {% if request.endpoint != 'auth.login' %}
           <a href="{{ url_for('auth.login') }}" class="btn">Sign in</a>

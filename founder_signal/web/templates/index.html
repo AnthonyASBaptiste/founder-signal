@@ -3,23 +3,22 @@
 {% block content %}
   {% set open_commitments = commitments|selectattr('status', 'equalto', 'open')|list %}
   {% set open_count = open_commitments|length %}
-  {% set do_now_count = briefing.do_now|length %}
+  {% set do_now_count = do_now|length %}
   {% set clarify_count = briefing.needs_clarification|length %}
-  {% set pending_proposals = commitments|selectattr('pending_change')|list %}
   {% set proposal_count = pending_proposals|length %}
 
   <!-- Attention-First Cockpit Hero -->
   <section class="cockpit-hero {% if do_now_count > 0 or proposal_count > 0 %}has-urgent{% else %}is-calm{% endif %}" aria-label="Founder Cockpit Summary">
     <div class="cockpit-hero-main">
       <div class="cockpit-lead">
-        {% if do_now_count > 0 %}
+        {% if proposal_count > 0 %}
+          <div class="cockpit-eyebrow warning">⚠️ Review Required</div>
+          <h2 class="cockpit-headline">{{ proposal_count }} proposed change{{ 's need' if proposal_count != 1 else ' needs' }} your confirmation</h2>
+          <p class="cockpit-desc">Threaded correspondence indicated deadline or owner evolutions on existing promises. Review and accept or reject.</p>
+        {% elif do_now_count > 0 %}
           <div class="cockpit-eyebrow urgent">⚡ Attention Required</div>
           <h2 class="cockpit-headline">{{ do_now_count }} action{{ 's' if do_now_count != 1 }} need{{ '' if do_now_count != 1 else 's' }} your focus today</h2>
           <p class="cockpit-desc">{{ briefing.summary }}. Clear urgent bottlenecks first to maintain team momentum.</p>
-        {% elif proposal_count > 0 %}
-          <div class="cockpit-eyebrow warning">⚠️ Review Required</div>
-          <h2 class="cockpit-headline">{{ proposal_count }} proposed change{{ 's need' if proposal_count != 1 else ' needs' }} your review</h2>
-          <p class="cockpit-desc">Deadline or owner modifications were detected in incoming sources. Review and accept or reject the proposed updates.</p>
         {% elif clarify_count > 0 %}
           <div class="cockpit-eyebrow warning">🔍 Needs Clarification</div>
           <h2 class="cockpit-headline">{{ clarify_count }} commitment{{ 's need' if clarify_count != 1 else ' needs' }} ownership or due dates</h2>
@@ -35,13 +34,9 @@
         {% endif %}
       </div>
       <div class="cockpit-hero-actions">
-        {% if do_now_count > 0 %}
-          <a href="{{ url_for('briefing_view') }}" class="btn">Review Briefing</a>
-          <button type="button" class="btn btn-outline" onclick="filterCommitments('do_now')">Filter Do Now</button>
-        {% else %}
-          <a href="{{ url_for('briefing_view') }}" class="btn btn-outline">Read Morning Briefing</a>
-          <a href="{{ url_for('processing_log') }}" class="btn">+ Processing Log</a>
-        {% endif %}
+        <a href="{{ url_for('ingest') }}" class="btn" style="background:var(--color-brand); color:#fff; font-weight:600;">+ Ingest Voice / Doc</a>
+        <a href="{{ url_for('briefing_view') }}" class="btn btn-outline">Read Daily Briefing</a>
+        <a href="{{ url_for('settings_view') }}" class="btn btn-outline">Settings</a>
       </div>
     </div>
 
@@ -49,34 +44,30 @@
     <div class="cockpit-metrics" aria-label="Supporting Ledger Counts">
       <div class="metric-chip {% if do_now_count > 0 %}urgent{% endif %}">
         <span class="metric-chip-label">Do Now</span>
-        <span class="metric-chip-value">{{ do_now_count }}</span>
+        <span class="metric-chip-value" id="metric-do-now">{{ do_now_count }}</span>
       </div>
       {% if proposal_count > 0 %}
       <div class="metric-chip proposed">
         <span class="metric-chip-label">Proposed</span>
-        <span class="metric-chip-value">{{ proposal_count }}</span>
+        <span class="metric-chip-value" id="metric-proposals">{{ proposal_count }}</span>
       </div>
       {% endif %}
       <div class="metric-chip">
         <span class="metric-chip-label">Open</span>
-        <span class="metric-chip-value">{{ open_count }}</span>
+        <span class="metric-chip-value" id="metric-open">{{ open_count }}</span>
       </div>
       <div class="metric-chip">
         <span class="metric-chip-label">Coming Up</span>
         <span class="metric-chip-value">{{ briefing.coming_up|length }}</span>
       </div>
       <div class="metric-chip">
-        <span class="metric-chip-label">Waiting On</span>
-        <span class="metric-chip-value">{{ briefing.waiting_on|length }}</span>
+        <span class="metric-chip-label">History</span>
+        <span class="metric-chip-value" id="metric-history">{{ history_commitments|length }}</span>
       </div>
-      <div class="metric-chip">
-        <span class="metric-chip-label">Clarify</span>
-        <span class="metric-chip-value">{{ clarify_count }}</span>
-      </div>
-      <div class="metric-chip">
-        <span class="metric-chip-label">Total</span>
-        <span class="metric-chip-value">{{ commitments|length }}</span>
-      </div>
+      <a href="{{ url_for('settings_view') }}" class="metric-chip" style="text-decoration:none; color:inherit; border-color:var(--color-border);" title="Emails excluded by VIP filter">
+        <span class="metric-chip-label">🛡️ Filter Excluded</span>
+        <span class="metric-chip-value" id="metric-excluded">{{ excluded_count }}</span>
+      </a>
       {% if needs_transcription_count and needs_transcription_count > 0 %}
       <div class="metric-chip audio-pending">
         <span class="metric-chip-label">Audio Pending</span>
@@ -96,283 +87,553 @@
   </div>
   {% endif %}
 
-  <!-- Commitment Ledger Section -->
-  <section class="section" aria-label="Commitment Ledger">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:1.25rem">
-      <div>
-        <h3 class="section-title">Commitment Ledger</h3>
-        <p style="font-size:0.875rem; color:var(--color-text-secondary); margin:0.2rem 0 0 0">Verbatim source tracking with quiet inline triage.</p>
-      </div>
-      <a href="{{ url_for('processing_log') }}" class="btn btn-sm btn-outline">+ Processing Log</a>
-    </div>
-
-    {% if source_groups or ungrouped_commitments %}
-      <search class="filter-bar" aria-label="Filter commitments by status">
-        <button type="button" class="filter-pill active" data-filter="all" onclick="filterCommitments('all')">
-          All <span class="pill-count">{{ commitments|length }}</span>
-        </button>
-        <button type="button" class="filter-pill" data-filter="do_now" onclick="filterCommitments('do_now')">
-          Do now <span class="pill-count">{{ do_now_count }}</span>
-        </button>
-        <button type="button" class="filter-pill" data-filter="open" onclick="filterCommitments('open')">
-          Open <span class="pill-count">{{ open_count }}</span>
-        </button>
-        <button type="button" class="filter-pill" data-filter="needs_clarification" onclick="filterCommitments('needs_clarification')">
-          Needs clarification <span class="pill-count">{{ clarify_count }}</span>
-        </button>
-        <button type="button" class="filter-pill" data-filter="done" onclick="filterCommitments('done')">
-          Done <span class="pill-count">{{ commitments|selectattr('status', 'equalto', 'done')|list|length }}</span>
-        </button>
-        <button type="button" class="filter-pill" data-filter="ignore" onclick="filterCommitments('ignore')">
-          Ignored <span class="pill-count">{{ commitments|selectattr('status', 'equalto', 'ignore')|list|length }}</span>
-        </button>
-      </search>
-
-      <div class="table-container">
-        <table id="commitments-table">
-          <thead>
-            <tr>
-              <th style="width:46%">Description &amp; Evidence</th>
-              <th style="width:14%">Owner</th>
-              <th style="width:14%">Due Date</th>
-              <th style="width:10%">Status</th>
-              <th style="width:16%">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for source, group_commitments in source_groups %}
-            <tr class="source-group-row" data-source-id="{{ source.id }}" data-group-open="true">
-              <td colspan="5">
-                <div class="source-group-header">
-                  <span class="source-icon" aria-hidden="true">
-                    {% if 'email' in source.id %}✉️{% elif 'transcript' in source.id or 'voice' in source.id %}🎙️{% else %}📄{% endif %}
-                  </span>
-                  <div class="source-group-info">
-                    <h4 class="source-group-title">{{ source.title }}</h4>
-                    <div class="source-group-meta">
-                      <span class="source-date">
-                        {% if source.received_at %}{{ source.received_at.strftime('%Y-%m-%d') }}{% else %}{{ source.created_at.strftime('%Y-%m-%d') }}{% endif %}
-                      </span>
-                      <span class="source-kind" style="font-size:0.75rem; opacity:0.7; font-family:var(--font-mono)">{{ source.kind }}</span>
-                    </div>
-                    {% if source.body %}
-                    <div class="source-group-summary">{{ source.body[:300] }}{% if source.body|length > 300 %}...{% endif %}</div>
-                    {% endif %}
-                  </div>
-                  <button type="button" class="btn btn-sm btn-outline toggle-group" onclick="toggleGroup('{{ source.id }}')" aria-label="Toggle {{ source.title }}">−</button>
-                </div>
-              </td>
-            </tr>
-            {% for c in group_commitments %}
-            <tr data-status="{{ c.status }}" 
-                data-source-id="{{ source.id }}"
-                data-do-now="{% if c in briefing.do_now %}true{% else %}false{% endif %}" 
-                data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
-              <td>
-                <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
-                  {{ c.description }}
-                  {% if c.pending_change %}
-                    <span class="badge badge-proposal">Proposed Change</span>
-                  {% endif %}
-                </div>
-                <div class="evidence-block">
-                  <span class="source-chip" title="Source ID: {{ c.source_id }}">
-                    {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Transcript{% else %}📄 Source{% endif %}
-                    <span style="opacity:0.75; font-family:var(--font-mono); font-weight:normal; font-size:0.7rem">#{{ c.source_id.split('-')[-1][:6] if '-' in c.source_id else c.source_id[:6] }}</span>
-                  </span>
-                  {% if c.evidence %}
-                    <details class="evidence-disclosure">
-                      <summary><span>“ Source Quote</span></summary>
-                      <blockquote>{{ c.evidence }}</blockquote>
-                    </details>
-                  {% endif %}
-                </div>
-              </td>
-              <td>
-                {% if c.owner %}
-                  <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
-                {% else %}
-                  <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if c in briefing.do_now %}
-                  <span class="due-pill due-pill-urgent" title="Immediate action required">⚡ {{ c.due_date or 'Due today' }}</span>
-                {% elif c.due_date %}
-                  <span class="due-pill">{{ c.due_date }}</span>
-                {% else %}
-                  <span style="color:var(--color-text-muted); font-size:0.825rem; font-style:italic">No date</span>
-                {% endif %}
-              </td>
-              <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
-              <td>
-                <div class="actions-group">
-                  {% if c.pending_change %}
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-review">Review Change</a>
-                  {% endif %}
-                  {% if c.status == 'open' %}
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="done">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
-                    </form>
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="ignore">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
-                    </form>
-                  {% elif c.status in ('done', 'ignore') %}
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="open">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
-                    </form>
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-            {% endfor %}
-
-            {% if ungrouped_commitments %}
-            <tr class="source-group-row" data-source-id="ungrouped" data-group-open="true">
-              <td colspan="5">
-                <div class="source-group-header">
-                  <span class="source-icon" aria-hidden="true">📄</span>
-                  <div class="source-group-info">
-                    <h4 class="source-group-title">Unattributed Commitments</h4>
-                    <div class="source-group-meta">
-                      <span class="source-kind" style="font-size:0.75rem; opacity:0.7; font-family:var(--font-mono)">no source</span>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-            {% for c in ungrouped_commitments %}
-            <tr data-status="{{ c.status }}" 
-                data-source-id="ungrouped"
-                data-do-now="{% if c in briefing.do_now %}true{% else %}false{% endif %}" 
-                data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
-              <td>
-                <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
-                  {{ c.description }}
-                  {% if c.pending_change %}
-                    <span class="badge badge-proposal">Proposed Change</span>
-                  {% endif %}
-                </div>
-                <div class="evidence-block">
-                  <span class="source-chip" title="Source ID: {{ c.source_id }}">
-                    {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Transcript{% else %}📄 Source{% endif %}
-                    <span style="opacity:0.75; font-family:var(--font-mono); font-weight:normal; font-size:0.7rem">#{{ c.source_id.split('-')[-1][:6] if '-' in c.source_id else c.source_id[:6] }}</span>
-                  </span>
-                  {% if c.evidence %}
-                    <details class="evidence-disclosure">
-                      <summary><span>“ Source Quote</span></summary>
-                      <blockquote>{{ c.evidence }}</blockquote>
-                    </details>
-                  {% endif %}
-                </div>
-              </td>
-              <td>
-                {% if c.owner %}
-                  <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
-                {% else %}
-                  <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if c in briefing.do_now %}
-                  <span class="due-pill due-pill-urgent" title="Immediate action required">⚡ {{ c.due_date or 'Due today' }}</span>
-                {% elif c.due_date %}
-                  <span class="due-pill">{{ c.due_date }}</span>
-                {% else %}
-                  <span style="color:var(--color-text-muted); font-size:0.825rem; font-style:italic">No date</span>
-                {% endif %}
-              </td>
-              <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
-              <td>
-                <div class="actions-group">
-                  {% if c.pending_change %}
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-review">Review Change</a>
-                  {% endif %}
-                  {% if c.status == 'open' %}
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="done">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
-                    </form>
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="ignore">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn-action-ghost" aria-label="Ignore '{{ c.description }}'">Ignore</button>
-                    </form>
-                  {% elif c.status in ('done', 'ignore') %}
-                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline">
-                      <input type="hidden" name="status" value="open">
-                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
-                      <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
-                    </form>
-                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment: {{ c.description }}">Edit</a>
-                  {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-            {% endif %}
-          </tbody>
-        </table>
-      </div>
-      <p id="filter-empty-message" class="empty" style="display:none; padding:1.5rem 0; text-align:center">No commitments match the selected filter.</p>
-
-      <script>
-        function filterCommitments(filter) {
-          document.querySelectorAll('.filter-pill').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.filter === filter);
-          });
-          const rows = document.querySelectorAll('#commitments-table tbody tr');
-          let visibleCount = 0;
-          rows.forEach(row => {
-            let show = false;
-            if (filter === 'all') show = true;
-            else if (filter === 'do_now') show = row.dataset.doNow === 'true';
-            else if (filter === 'needs_clarification') show = row.dataset.needsClarification === 'true';
-            else show = row.dataset.status === filter;
-            
-            row.classList.toggle('filtered-out', !show);
-            if (show) visibleCount++;
-          });
-          const emptyMsg = document.getElementById('filter-empty-message');
-          if (emptyMsg) {
-            emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
-          }
-        }
-
-        function toggleGroup(sourceId) {
-          const header = document.querySelector(`tr.source-group-row[data-source-id="${sourceId}"]`);
-          const isOpen = header && header.dataset.groupOpen === 'true';
-          header.dataset.groupOpen = isOpen ? 'false' : 'true';
-          const toggleBtn = header.querySelector('.toggle-group');
-          if (toggleBtn) toggleBtn.textContent = isOpen ? '+' : '−';
-          
-          const commitmentRows = document.querySelectorAll(`tr[data-source-id="${sourceId}"]:not(.source-group-row)`);
-          commitmentRows.forEach(row => {
-            row.classList.toggle('filtered-out', !isOpen);
-          });
-        }
-      </script>
-    {% else %}
-      <div class="deck-clear-card">
-        <div class="deck-clear-emblem" aria-hidden="true">✦</div>
-        <h3 class="deck-clear-title">The deck is clear</h3>
-        <p class="deck-clear-desc">No commitments in your ledger yet. Drop in an email, meeting transcript, or voice note to extract actionable signals.</p>
-        <div style="margin-top:1.25rem">
-          <a href="{{ url_for('processing_log') }}" class="btn">+ Processing Log</a>
+  <!-- Section: Learned Rule Suggestions (Item 6) -->
+  {% if pending_rules %}
+  <div id="rules-container" style="margin-bottom:1.75rem;">
+    {% for rule in pending_rules %}
+    <div class="card rule-suggestion-card" id="rule-card-{{ rule.id }}" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius-lg); padding:1rem 1.25rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:0.75rem;">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <span style="font-size:1.4rem;">💡</span>
+        <div>
+          <strong style="color:#166534; font-size:0.95rem;">Rule Suggestion (Learned from your decisions):</strong>
+          <p style="color:#14532d; font-size:0.875rem; margin:0.15rem 0 0 0;">
+            You repeatedly dismissed items from <code>{{ rule.pattern }}</code>. Exclude this sender/domain from future scans?
+          </p>
         </div>
       </div>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <button type="button" class="btn btn-sm" style="background:#15803d; color:#fff;" onclick="handleRuleDecision('{{ rule.id }}', 'accept')">Approve Rule</button>
+        <button type="button" class="btn btn-sm btn-action-ghost" onclick="handleRuleDecision('{{ rule.id }}', 'dismiss')">Dismiss</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Section: Changes Needing Approval (Item 3) -->
+  {% if pending_proposals %}
+  <section class="section action-section" id="section-proposals" style="margin-bottom:2rem;" aria-label="Changes Needing Approval">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <div>
+        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+          <span style="color:var(--color-warning);">⚠️</span> Changes Needing Approval
+          <span class="badge badge-proposal" id="count-proposals">{{ pending_proposals|length }}</span>
+        </h3>
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin:0.2rem 0 0 0;">
+          Threaded messages detected an evolution to existing promises. Review what changed below.
+        </p>
+      </div>
+    </div>
+
+    <div class="proposals-list" style="display:flex; flex-direction:column; gap:0.85rem;">
+      {% for c in pending_proposals %}
+      <div class="card proposal-card" id="proposal-card-{{ c.id }}" style="border-left:4px solid var(--color-warning); background:var(--color-surface); padding:1.25rem; border-radius:var(--radius-md);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+          <div style="flex:1; min-width:280px;">
+            <div style="font-weight:600; font-size:1rem; color:var(--color-text); line-height:1.4;">
+              {{ c.description }}
+              <span class="badge badge-proposal">Proposed Change</span>
+            </div>
+            <div style="margin:0.5rem 0; padding:0.55rem 0.85rem; background:var(--color-warning-surface); border:1px solid var(--color-warning-border); border-radius:var(--radius-sm); font-size:0.875rem;">
+              <strong>Evolution:</strong> {{ c.pending_change.diff_summary or c.pending_change.description }}
+            </div>
+            {% if c.pending_change.evidence or c.evidence %}
+            <details class="evidence-disclosure" style="margin-top:0.4rem;">
+              <summary><span>“ Verbatim Source Evidence</span></summary>
+              <blockquote>{{ c.pending_change.evidence or c.evidence }}</blockquote>
+            </details>
+            {% endif %}
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm" style="background:var(--color-brand); color:#fff;" onclick="handleProposalDecision('{{ c.id }}', 'accept')">Accept Proposal</button>
+            <button type="button" class="btn btn-sm btn-outline" style="color:var(--color-error); border-color:var(--color-error);" onclick="handleProposalDecision('{{ c.id }}', 'reject')">Reject Proposal</button>
+            <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn btn-sm btn-action-review">Review Change</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Section: Do Now (Overdue & Due Soon - Item 2) -->
+  <section class="section action-section" id="section-do-now" style="margin-bottom:2.25rem;" aria-label="Do Now Action List">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <div>
+        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+          <span style="color:var(--color-urgent);">⚡</span> Do Now: Overdue &amp; Due Soon
+          <span class="badge badge-open" id="count-do-now" style="background:var(--color-urgent); color:#fff;">{{ do_now|length }}</span>
+        </h3>
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin:0.2rem 0 0 0;">
+          Urgent commitments due today, overdue, or within {{ settings.get('due_soon_days', 3) }} days.
+        </p>
+      </div>
+    </div>
+
+    {% if do_now %}
+    <div class="table-container">
+      <table id="do-now-table" class="commitments-table">
+        <thead>
+          <tr>
+            <th style="width:48%">Description &amp; Evidence</th>
+            <th style="width:14%">Owner</th>
+            <th style="width:14%">Due Date</th>
+            <th style="width:10%">Status</th>
+            <th style="width:14%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="do-now-tbody">
+          {% for c in do_now %}
+          <tr id="commitment-row-{{ c.id }}" data-status="{{ c.status }}" data-do-now="true" data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
+            <td>
+              <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
+                {{ c.description }}
+                {% if c.pending_change %}<span class="badge badge-proposal">Proposed Change</span>{% endif %}
+              </div>
+              <div class="evidence-block">
+                <span class="source-chip" title="Source ID: {{ c.source_id }}">
+                  {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Audio{% elif 'doc' in c.source_id or 'pdf' in c.source_id %}📄 Doc{% else %}📄 Source{% endif %}
+                </span>
+                {% if c.evidence %}
+                <details class="evidence-disclosure">
+                  <summary><span>“ Source Quote</span></summary>
+                  <blockquote>{{ c.evidence }}</blockquote>
+                </details>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if c.owner %}
+                <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
+              {% else %}
+                <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="due-pill due-pill-urgent" title="Immediate action required">⚡ {{ c.due_date or 'Due today' }}</span>
+            </td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>
+              <div class="actions-group">
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'done', this);">
+                  <input type="hidden" name="status" value="done">
+                  <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
+                </form>
+                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'ignore', this);">
+                  <input type="hidden" name="status" value="ignore">
+                  <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                  <button type="submit" class="btn-action-ghost" aria-label="Ignore">Ignore</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card" style="padding:1.5rem; text-align:center; color:var(--color-text-secondary); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md);">
+      ✦ <strong>No urgent items pending today!</strong> Your immediate commitments are settled.
+    </div>
     {% endif %}
   </section>
-{% endblock %}
 
+  <!-- Section: Active Commitments (New / On Track - Item 2) -->
+  {% if new_commitments %}
+  <section class="section action-section" id="section-active" style="margin-bottom:2.25rem;" aria-label="Active Commitments">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+      <div>
+        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+          <span>✦</span> Active Commitments
+          <span class="badge badge-open" id="count-active">{{ new_commitments|length }}</span>
+        </h3>
+        <p style="font-size:0.85rem; color:var(--color-text-secondary); margin:0.2rem 0 0 0;">
+          Incoming and scheduled promises monitored across your ledger.
+        </p>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table id="active-table" class="commitments-table">
+        <thead>
+          <tr>
+            <th style="width:48%">Description &amp; Evidence</th>
+            <th style="width:14%">Owner</th>
+            <th style="width:14%">Due Date</th>
+            <th style="width:10%">Status</th>
+            <th style="width:14%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="active-tbody">
+          {% for c in new_commitments %}
+          <tr id="commitment-row-{{ c.id }}" data-status="{{ c.status }}" data-do-now="false" data-needs-clarification="{% if c in briefing.needs_clarification %}true{% else %}false{% endif %}">
+            <td>
+              <div style="font-weight:600; color:var(--color-text); line-height:1.45; font-size:0.95rem">
+                {{ c.description }}
+                {% if c.pending_change %}<span class="badge badge-proposal">Proposed Change</span>{% endif %}
+              </div>
+              <div class="evidence-block">
+                <span class="source-chip" title="Source ID: {{ c.source_id }}">
+                  {% if 'email' in c.source_id %}✉️ Email{% elif 'transcript' in c.source_id or 'voice' in c.source_id %}🎙️ Audio{% elif 'doc' in c.source_id or 'pdf' in c.source_id %}📄 Doc{% else %}📄 Source{% endif %}
+                </span>
+                {% if c.evidence %}
+                <details class="evidence-disclosure">
+                  <summary><span>“ Source Quote</span></summary>
+                  <blockquote>{{ c.evidence }}</blockquote>
+                </details>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              {% if c.owner %}
+                <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
+              {% else %}
+                <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if c.due_date %}
+                <span class="due-pill">{{ c.due_date }}</span>
+              {% else %}
+                <span style="color:var(--color-text-muted); font-size:0.825rem; font-style:italic">No date</span>
+              {% endif %}
+            </td>
+            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>
+              <div class="actions-group">
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'done', this);">
+                  <input type="hidden" name="status" value="done">
+                  <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                  <button type="submit" class="btn btn-sm btn-action-done" aria-label="Mark '{{ c.description }}' as done">Done</button>
+                </form>
+                <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
+                <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'ignore', this);">
+                  <input type="hidden" name="status" value="ignore">
+                  <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                  <button type="submit" class="btn-action-ghost" aria-label="Ignore">Ignore</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Section: Collapsed History & Settled Items (Item 2) -->
+  <section class="section" style="margin-top:2.5rem;">
+    <details class="history-accordion" style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:1.25rem 1.5rem;">
+      <summary style="cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-weight:600; font-size:1.05rem; color:var(--color-text); list-style:none;">
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+          <span style="font-size:1.2rem;">📦</span>
+          <span>History &amp; Settled Items (<span id="history-count">{{ history_commitments|length }}</span>)</span>
+        </div>
+        <span style="font-size:0.825rem; color:var(--color-text-secondary); font-weight:normal;">Click to view completed, ignored, &amp; deferred items ▼</span>
+      </summary>
+
+      <div style="margin-top:1.25rem; border-top:1px solid var(--color-border); padding-top:1rem;">
+        {% if history_commitments %}
+        <div class="table-container">
+          <table class="commitments-table">
+            <thead>
+              <tr>
+                <th style="width:48%">Description &amp; Evidence</th>
+                <th style="width:14%">Owner</th>
+                <th style="width:14%">Due Date</th>
+                <th style="width:10%">Status</th>
+                <th style="width:14%">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              {% for c in history_commitments %}
+              <tr id="commitment-row-{{ c.id }}" data-status="{{ c.status }}">
+                <td>
+                  <div style="font-weight:500; color:var(--color-text-secondary); text-decoration:{% if c.status == 'done' %}line-through{% else %}none{% endif %}; font-size:0.9rem">
+                    {{ c.description }}
+                  </div>
+                  {% if c.evidence %}
+                  <details class="evidence-disclosure" style="margin-top:0.3rem;">
+                    <summary><span>“ Quote</span></summary>
+                    <blockquote>{{ c.evidence }}</blockquote>
+                  </details>
+                  {% endif %}
+                </td>
+                <td><span style="color:var(--color-text-muted); font-size:0.85rem">{{ c.owner or '—' }}</span></td>
+                <td><span style="color:var(--color-text-muted); font-size:0.85rem">{{ c.due_date or '—' }}</span></td>
+                <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+                <td>
+                  <div class="actions-group">
+                    <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'open', this);">
+                      <input type="hidden" name="status" value="open">
+                      <input type="hidden" name="next" value="{{ url_for('dashboard') }}">
+                      <button type="submit" class="btn btn-sm btn-action-reopen" aria-label="Reopen '{{ c.description }}'">Reopen</button>
+                    </form>
+                    <a href="{{ url_for('commitment_detail', commitment_id=c.id) }}" class="btn-action-ghost" aria-label="Edit commitment">Edit</a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p style="color:var(--color-text-secondary); font-size:0.875rem; text-align:center; padding:1rem 0;">No completed or settled items in history yet.</p>
+        {% endif %}
+      </div>
+    </details>
+  </section>
+
+  <!-- Complete Optimistic UI & Interaction Engine (Items 3, 4, 6) -->
+  <script>
+    let activeUndoTimeout = null;
+
+    // Helper to safely update number counters in DOM
+    function updateCounter(id, delta) {
+      const el = document.getElementById(id);
+      if (el) {
+        let val = parseInt(el.textContent.trim(), 10) || 0;
+        val = Math.max(0, val + delta);
+        el.textContent = val;
+      }
+    }
+
+    // Item 4: Instant 0ms status change with 6-second Undo option
+    function handleStatusChange(event, id, newStatus, formElement) {
+      if (event) event.preventDefault();
+      const row = document.getElementById('commitment-row-' + id);
+      if (!row) return true;
+
+      const prevStatus = row.dataset.status || 'open';
+      const isDoNow = row.dataset.doNow === 'true';
+
+      // Immediate visual feedback (0ms perceived lag)
+      row.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(24px)';
+
+      setTimeout(() => {
+        row.style.display = 'none';
+      }, 230);
+
+      // Optimistic badge adjustments
+      if (prevStatus === 'open') {
+        if (isDoNow) updateCounter('count-do-now', -1);
+        else updateCounter('count-active', -1);
+        updateCounter('metric-open', -1);
+        if (newStatus === 'done' || newStatus === 'ignore') {
+          updateCounter('history-count', 1);
+          updateCounter('metric-history', 1);
+        }
+      } else if (newStatus === 'open') {
+        updateCounter('history-count', -1);
+        updateCounter('metric-history', -1);
+        updateCounter('count-active', 1);
+        updateCounter('metric-open', 1);
+      }
+
+      // Background asynchronous save
+      fetch('/api/commitments/' + encodeURIComponent(id) + '/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          row.dataset.status = newStatus;
+          showToastWithUndo('Marked as ' + newStatus, () => {
+            // Undo handler
+            handleUndo(id, prevStatus, row, isDoNow, newStatus);
+          });
+
+          // Item 6: If repeated dismissal created a rule suggestion, notify user
+          if (data.suggested_rule) {
+            showToast('💡 Suggestion generated: Rule proposed for ' + data.suggested_rule.pattern);
+          }
+        } else {
+          // Revert visual state
+          revertRow(row, isDoNow, prevStatus, newStatus);
+          showToast('Error: ' + (data.error || 'Update failed'), true);
+        }
+      })
+      .catch(err => {
+        revertRow(row, isDoNow, prevStatus, newStatus);
+        showToast('Network error updating status', true);
+      });
+
+      return false;
+    }
+
+    function handleUndo(id, targetStatus, row, isDoNow, failedStatus) {
+      fetch('/api/commitments/' + encodeURIComponent(id) + '/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status: targetStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          revertRow(row, isDoNow, targetStatus, failedStatus);
+          showToast('Action undone. Commitment restored.');
+        } else {
+          showToast('Failed to undo status', true);
+        }
+      })
+      .catch(() => {
+        showToast('Network error during undo', true);
+      });
+    }
+
+    function revertRow(row, isDoNow, originalStatus, changedStatus) {
+      row.style.display = '';
+      row.dataset.status = originalStatus;
+      setTimeout(() => {
+        row.style.opacity = '1';
+        row.style.transform = 'translateX(0)';
+      }, 20);
+
+      if (originalStatus === 'open') {
+        if (isDoNow) updateCounter('count-do-now', 1);
+        else updateCounter('count-active', 1);
+        updateCounter('metric-open', 1);
+        if (changedStatus === 'done' || changedStatus === 'ignore') {
+          updateCounter('history-count', -1);
+          updateCounter('metric-history', -1);
+        }
+      }
+    }
+
+    // Item 3: 1-click in-place proposal accept/reject
+    function handleProposalDecision(id, decision) {
+      const card = document.getElementById('proposal-card-' + id);
+      if (card) {
+        card.style.transition = 'all 0.25s ease';
+        card.style.opacity = '0.3';
+      }
+
+      fetch('/api/commitments/' + encodeURIComponent(id) + '/' + decision + '_proposal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (card) {
+            card.style.transform = 'translateY(-10px)';
+            card.style.opacity = '0';
+            setTimeout(() => card.remove(), 260);
+          }
+          updateCounter('count-proposals', -1);
+          updateCounter('metric-proposals', -1);
+          showToast(decision === 'accept' ? 'Proposed change accepted & applied.' : 'Proposal rejected.');
+        } else {
+          if (card) card.style.opacity = '1';
+          showToast('Error: ' + (data.error || 'Could not process proposal'), true);
+        }
+      })
+      .catch(() => {
+        if (card) card.style.opacity = '1';
+        showToast('Network error processing proposal', true);
+      });
+    }
+
+    // Item 6: Learned rule suggestion approval/dismissal
+    function handleRuleDecision(ruleId, decision) {
+      const card = document.getElementById('rule-card-' + ruleId);
+      if (card) {
+        card.style.transition = 'all 0.25s ease';
+        card.style.opacity = '0.3';
+      }
+
+      fetch('/api/rules/' + encodeURIComponent(ruleId) + '/' + decision, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          if (card) {
+            card.style.transform = 'translateX(20px)';
+            card.style.opacity = '0';
+            setTimeout(() => card.remove(), 260);
+          }
+          showToast(decision === 'accept' ? 'Rule approved! Future emails will be excluded.' : 'Rule suggestion dismissed.');
+        } else {
+          if (card) card.style.opacity = '1';
+          showToast('Error: ' + (data.error || 'Could not process rule'), true);
+        }
+      })
+      .catch(() => {
+        if (card) card.style.opacity = '1';
+        showToast('Network error processing rule', true);
+      });
+    }
+
+    // Toast with Undo Action
+    function showToastWithUndo(message, undoCallback) {
+      if (activeUndoTimeout) clearTimeout(activeUndoTimeout);
+      let toast = document.getElementById('fs-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'fs-toast';
+        document.body.appendChild(toast);
+      }
+
+      toast.style.cssText = 'position:fixed; bottom:28px; right:28px; z-index:9999; display:flex; align-items:center; gap:1rem; padding:0.85rem 1.35rem; border-radius:10px; font-weight:500; font-size:0.9rem; box-shadow:0 6px 20px rgba(0,0,0,0.22); transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1); transform:translateY(12px); opacity:0; background:var(--color-surface, #ffffff); color:var(--color-text, #1f2937); border:1px solid var(--color-border);';
+
+      toast.innerHTML = `
+        <span style="font-weight:600;">${message}</span>
+        <button id="fs-toast-undo-btn" type="button" style="background:var(--color-brand, #164e4b); color:#ffffff; border:none; padding:0.35rem 0.85rem; border-radius:6px; font-size:0.85rem; font-weight:600; cursor:pointer;">Undo</button>
+      `;
+
+      const undoBtn = document.getElementById('fs-toast-undo-btn');
+      if (undoBtn) {
+        undoBtn.onclick = function() {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(12px)';
+          if (activeUndoTimeout) clearTimeout(activeUndoTimeout);
+          if (undoCallback) undoCallback();
+        };
+      }
+
+      setTimeout(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+      }, 10);
+
+      activeUndoTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(12px)';
+      }, 6000);
+    }
+
+    function showToast(message, isError) {
+      let toast = document.getElementById('fs-toast-simple');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'fs-toast-simple';
+        toast.style.cssText = 'position:fixed; bottom:28px; right:28px; z-index:9999; padding:0.75rem 1.25rem; border-radius:8px; font-weight:600; font-size:0.875rem; box-shadow:0 4px 16px rgba(0,0,0,0.18); transition:all 0.25s ease; transform:translateY(10px); opacity:0; pointer-events:none;';
+        document.body.appendChild(toast);
+      }
+      toast.style.background = isError ? 'var(--color-error)' : 'var(--color-brand)';
+      toast.style.color = '#ffffff';
+      toast.textContent = message;
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.transform = 'translateY(10px)';
+        toast.style.opacity = '0';
+      }, 3500);
+    }
+  </script>
+{% endblock %}

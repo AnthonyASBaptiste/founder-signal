@@ -25,8 +25,9 @@ from .config import Config
 from .ledger import open_ledger
 from .models import Source, Commitment, ProcessingLog
 from .extraction import extract, to_commitments
-from .reconciliation import reconcile
+from .reconciliation import reconcile, build_pending_change
 from .briefing import generate_briefing
+from .notifications import notify_urgent_commitment, notify_morning_briefing, send_discord_alert
 
 HIMALAYA_BIN = os.environ.get("HIMALAYA_BIN", "himalaya")
 HERMES_BIN = os.environ.get("HERMES_BIN", "hermes")
@@ -78,6 +79,21 @@ def _transcribe_audio(file_path: Path) -> Optional[str]:
         return None
 
 
+def _extract_pdf_text(file_path: Path) -> Optional[str]:
+    """Extract text from a PDF file using pdftotext."""
+    pdftotext = shutil.which("pdftotext")
+    if pdftotext:
+        try:
+            res = subprocess.run([pdftotext, str(file_path), "-"], capture_output=True, text=True, timeout=30)
+            if res.returncode == 0:
+                text = res.stdout.strip()
+                if text:
+                    return text
+        except Exception:
+            pass
+    return None
+
+
 class InboxWatcher:
     """Watch an inbox folder and process new files through Founder Signal."""
 
@@ -110,14 +126,18 @@ class InboxWatcher:
     AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".ogg", ".aac"}
     # Video extensions recognized as meeting recordings (need transcription before extraction).
     VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv"}
+    # Document extensions
+    DOC_EXTENSIONS = {".pdf"}
 
     def scan(self) -> int:
         """Scan the inbox for new files and process them.
 
-        Text files (.txt, .md) are extracted immediately. Audio files
-        (.mp3, .wav, .m4a, .ogg, .aac) and video files (.mp4, .mov, .avi, .mkv)
-        are recognized as voice notes / meeting recordings and transcribed
-        locally if possible before extraction.
+        Text files (.txt, .md) and documents (.pdf) are extracted. Audio files
+        (.mp3, .wav, .m4a, .ogg, .aac) are recognized as voice notes and
+        transcribed locally before extraction.
+
+        Processed files are removed from the inbox, and redundant items
+        already recorded in the database are skipped and cleaned up.
 
         Returns the number of files processed.
         """
@@ -127,9 +147,19 @@ class InboxWatcher:
             if not file_path.is_file():
                 continue
             if file_path.name.endswith(".done"):
+                file_path.unlink(missing_ok=True)
+                continue
+            # Deduplication: if already processed and recorded in DB, remove and skip
+            if self.ledger.has_processed_file(file_path.name):
+                file_path.unlink(missing_ok=True)
                 continue
             ext = file_path.suffix.lower()
-            if ext not in self.TEXT_EXTENSIONS and ext not in self.AUDIO_EXTENSIONS and ext not in self.VIDEO_EXTENSIONS:
+            if (
+                ext not in self.TEXT_EXTENSIONS
+                and ext not in self.AUDIO_EXTENSIONS
+                and ext not in self.VIDEO_EXTENSIONS
+                and ext not in self.DOC_EXTENSIONS
+            ):
                 continue
             try:
                 self.process_file(file_path)
@@ -212,16 +242,12 @@ class InboxWatcher:
                     if issue.kind == "change" and issue.proposed is not None:
                         existing_c = self.ledger.get_commitment(issue.commitment_id)
                         if existing_c:
-                            existing_c.pending_change = {
-                                "due_date": issue.proposed.due_date,
-                                "owner": issue.proposed.owner,
-                                "evidence": issue.proposed.evidence,
-                                "description": issue.description,
-                            }
+                            existing_c.pending_change = build_pending_change(existing_c, issue.proposed, issue.description)
                             self.ledger.update_commitment(existing_c)
 
                 _record_log("ok", source_id, len(reconciliation.new_commitments))
                 self._mark_done(file_path)
+                self._check_urgent_commitments(reconciliation.new_commitments, title)
                 print(
                     f"[founder-signal] {file_path.name}: transcribed {kind}, "
                     f"{len(reconciliation.new_commitments)} new commitment(s), "
@@ -241,6 +267,52 @@ class InboxWatcher:
                     f"Install openai-whisper (pip install openai-whisper) for "
                     f"automatic transcription."
                 )
+            return
+
+        # Document files (PDF): extract text, then extract commitments
+        if ext in self.DOC_EXTENSIONS:
+            kind = "document"
+            text = _extract_pdf_text(file_path)
+            if not text or not text.strip():
+                _record_log("error", error_message="Could not extract text from PDF")
+                return
+            title = file_path.stem
+            source_id = f"inbox:doc:{title}:{int(datetime.now(timezone.utc).timestamp())}"
+            source = Source(id=source_id, kind=kind, title=title, body=text)
+            result = extract(
+                source,
+                use_llm=self.config.use_llm,
+                config=self.config,
+                account=account,
+            )
+            source.extractor = result.extractor
+            self.ledger.add_source(source)
+
+            proposed = to_commitments(result, source.id)
+            reconciliation = reconcile(
+                self.ledger,
+                proposed,
+                within_days=self.config.briefing_coming_up_days,
+            )
+
+            for c in reconciliation.new_commitments:
+                self.ledger.add_commitment(c)
+
+            for issue in reconciliation.issues:
+                if issue.kind == "change" and issue.proposed is not None:
+                    existing_c = self.ledger.get_commitment(issue.commitment_id)
+                    if existing_c:
+                        existing_c.pending_change = build_pending_change(existing_c, issue.proposed, issue.description)
+                        self.ledger.update_commitment(existing_c)
+
+            _record_log("ok", source_id, len(reconciliation.new_commitments))
+            self._mark_done(file_path)
+            self._check_urgent_commitments(reconciliation.new_commitments, title)
+            print(
+                f"[founder-signal] {file_path.name}: extracted PDF document, "
+                f"{len(reconciliation.new_commitments)} new commitment(s), "
+                f"{len(reconciliation.issues)} issue(s) needing review."
+            )
             return
 
         body = file_path.read_text(encoding="utf-8", errors="replace")
@@ -270,22 +342,32 @@ class InboxWatcher:
             if issue.kind == "change" and issue.proposed is not None:
                 existing_c = self.ledger.get_commitment(issue.commitment_id)
                 if existing_c:
-                    existing_c.pending_change = {
-                        "due_date": issue.proposed.due_date,
-                        "owner": issue.proposed.owner,
-                        "evidence": issue.proposed.evidence,
-                        "description": issue.description,
-                    }
+                    existing_c.pending_change = build_pending_change(existing_c, issue.proposed, issue.description)
                     self.ledger.update_commitment(existing_c)
 
         _record_log("ok", source_id, len(reconciliation.new_commitments))
         self._mark_done(file_path)
+        self._check_urgent_commitments(reconciliation.new_commitments, title)
 
         print(
             f"[founder-signal] Processed {file_path.name}: "
             f"{len(reconciliation.new_commitments)} new commitment(s), "
             f"{len(reconciliation.issues)} issue(s) needing review."
         )
+
+    def _check_urgent_commitments(self, commitments: list[Commitment], source_title: str) -> None:
+        """Trigger urgent Discord & desktop alerts if any commitment is due soon."""
+        try:
+            settings = self.ledger.get_settings()
+            target = settings.get("discord_alerts_target", "discord:alerts-and-logs")
+            app_url = settings.get("app_url", "http://127.0.0.1:5000")
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d")
+            for c in commitments:
+                if c.due_date and c.due_date in (today, tomorrow):
+                    notify_urgent_commitment(c, source_title=source_title, target=target, app_url=app_url)
+        except Exception as exc:
+            print(f"[founder-signal] Error sending urgent alerts: {exc}", file=sys.stderr)
 
     def _guess_kind(self, file_path: Path) -> str:
         name = file_path.name.lower()
@@ -296,24 +378,24 @@ class InboxWatcher:
         return "email"
 
     def _mark_done(self, file_path: Path) -> None:
+        """Remove processed item from inbox after recording in database."""
         dest = self.processed_path / file_path.name
         if dest.exists():
             dest = self.processed_path / f"{file_path.stem}.{int(time.time())}{file_path.suffix}"
-        shutil.move(str(file_path), str(dest))
-        # Write a .done marker alongside the original location for audit.
-        marker = self.inbox_path / f"{file_path.name}.done"
-        marker.write_text(
-            f"processed at {datetime.now(timezone.utc).isoformat()}\n",
-            encoding="utf-8",
-        )
+        try:
+            shutil.move(str(file_path), str(dest))
+        except OSError:
+            file_path.unlink(missing_ok=True)
 
     def heartbeat_email(
         self,
         accounts: Optional[list[str]] = None,
         days: Optional[int] = None,
     ) -> int:
-        """Fetch new email via himalaya and write to the inbox folder.
+        """Fetch new VIP email via himalaya and write to the inbox folder.
 
+        Filters envelopes by VIP senders, domains, and keywords from settings
+        so promotional emails and newsletters are never downloaded or extracted.
         Returns the number of emails fetched.
         """
         himalaya = self.himalaya_bin or resolve_himalaya_bin()
@@ -328,13 +410,30 @@ class InboxWatcher:
             print("[founder-signal] No himalaya accounts configured.", file=sys.stderr)
             return 0
 
+        settings = self.ledger.get_settings()
+        only_scan_vip = settings.get("only_scan_vip", True)
+        include_directly_addressed = settings.get("include_directly_addressed", True)
+        auto_ignore_bulk = settings.get("auto_ignore_bulk", True)
+
+        vip_emails = {e.lower().strip() for e in settings.get("vip_emails", [])}
+        vip_domains = {d.lower().strip().lstrip("@") for d in settings.get("vip_domains", [])}
+        for person in settings.get("vip_people", []):
+            if person.get("email"):
+                vip_emails.add(person["email"].lower().strip())
+            if person.get("domain"):
+                vip_domains.add(person["domain"].lower().strip().lstrip("@"))
+        vip_keywords = [k.lower().strip() for k in settings.get("vip_keywords", [])]
+
+        excluded_senders = {e.lower().strip() for e in settings.get("excluded_senders", [])}
+        excluded_domains = {d.lower().strip().lstrip("@") for d in settings.get("excluded_domains", [])}
+
         lookback_days = days if days is not None else getattr(self.config, "heartbeat_days", 3)
         since = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
         fetched = 0
 
         for account in accounts:
             try:
-                # Search envelopes received since yesterday, output as JSON.
+                # Search envelopes received since lookback date, output as JSON.
                 result = subprocess.run(
                     [
                         himalaya,
@@ -362,22 +461,90 @@ class InboxWatcher:
                     msg_id = env.get("id")
                     if not msg_id:
                         continue
-                    # Skip if already in inbox.
                     safe_id = "".join(
                         c if c.isalnum() or c in "-_" else "_" for c in str(msg_id)
                     )
                     file_name = f"email-{account}-{safe_id}.txt"
-                    if (
-                        (self.inbox_path / file_name).exists()
-                        or (self.processed_path / file_name).exists()
-                        or (self.inbox_path / f"{file_name}.done").exists()
-                    ):
+
+                    # Skip if already recorded in ledger
+                    if self.ledger.has_processed_file(file_name):
                         continue
+
+                    # Check VIP criteria against envelope headers
+                    from_entries = env.get("from") or []
+                    to_entries = env.get("to") or []
+                    subject = (env.get("subject") or "").lower()
+
+                    sender_emails = [f.get("email", "").lower() for f in from_entries if f.get("email")]
+                    sender_names = [f.get("name", "").lower() for f in from_entries if f.get("name")]
+                    recipient_emails = [t.get("email", "").lower() for t in to_entries if t.get("email")]
+
+                    # 1. Bulk / Automated ignore rule
+                    if auto_ignore_bulk:
+                        if any("noreply" in se or "no-reply" in se or "donotreply" in se or "mailer-daemon" in se for se in sender_emails):
+                            self.ledger.increment_excluded_count(1)
+                            continue
+
+                    # 2. Learned/approved exclusion rules
+                    if any(se in excluded_senders for se in sender_emails) or any(
+                        any(se.endswith(f"@{ed}") or se.endswith(f".{ed}") for ed in excluded_domains)
+                        for se in sender_emails
+                    ):
+                        self.ledger.increment_excluded_count(1)
+                        continue
+
+                    # 3. Check VIP Match
+                    is_vip = False
+                    for se in sender_emails:
+                        if se in vip_emails:
+                            is_vip = True
+                            break
+                        for vd in vip_domains:
+                            if se.endswith(f"@{vd}") or se.endswith(f".{vd}"):
+                                is_vip = True
+                                break
+                        if is_vip:
+                            break
+
+                    # Also check if recipient is a VIP or founder
+                    if not is_vip:
+                        for re in recipient_emails:
+                            if re in vip_emails:
+                                is_vip = True
+                                break
+
+                    # Also check keywords in subject or sender
+                    if not is_vip and vip_keywords:
+                        search_text = f"{subject} {' '.join(sender_names)} {' '.join(sender_emails)}"
+                        for kw in vip_keywords:
+                            if kw in search_text:
+                                is_vip = True
+                                break
+
+                    # 4. Check directly addressed rule
+                    is_directly_addressed = False
+                    if include_directly_addressed and recipient_emails:
+                        founder_email = (settings.get("founder_email") or "").lower().strip()
+                        if founder_email:
+                            if founder_email in recipient_emails and len(recipient_emails) <= 5:
+                                is_directly_addressed = True
+                        else:
+                            if len(recipient_emails) <= 2 and not any("marketing" in se or "newsletter" in se or "events" in se or "webinar" in se for se in sender_emails):
+                                is_directly_addressed = True
+
+                    # If envelope has no sender or recipient info (e.g. synthetic test envelope), treat as VIP
+                    if not sender_emails and not recipient_emails:
+                        is_vip = True
+
+                    if only_scan_vip and not is_vip and not is_directly_addressed:
+                        # Excluded by VIP filter: increment predictable counter
+                        self.ledger.increment_excluded_count(1)
+                        continue
+
                     body = self._fetch_message_body(account, str(msg_id))
                     if body:
                         self._write_email_to_inbox(account, str(msg_id), body)
                         fetched += 1
-                        # Process immediately with per-account founder identity.
                         file_path = self.inbox_path / file_name
                         if file_path.exists():
                             self.process_file(file_path, account=account)
@@ -386,7 +553,7 @@ class InboxWatcher:
             except Exception as exc:  # noqa: BLE001
                 print(f"[founder-signal] error fetching {account}: {exc}", file=sys.stderr)
 
-        print(f"[founder-signal] Heartbeat fetched {fetched} email(s).")
+        print(f"[founder-signal] Heartbeat fetched {fetched} VIP email(s).")
         return fetched
 
     def _himalaya_accounts(self) -> list[str]:
@@ -520,25 +687,9 @@ class InboxWatcher:
         return False
 
     def _deliver_discord(self, message: str) -> bool:
-        try:
-            result = subprocess.run(
-                [HERMES_BIN, "send", "--to", "discord", "--subject", "Founder Signal Briefing"],
-                input=message,
-                text=True,
-                capture_output=True,
-                timeout=30,
-            )
-            if result.returncode == 0:
-                print("[founder-signal] Briefing delivered to Discord.")
-                return True
-            print(
-                f"[founder-signal] Discord delivery failed: {result.stderr.strip()}",
-                file=sys.stderr,
-            )
-            return False
-        except Exception as exc:  # noqa: BLE001
-            print(f"[founder-signal] Discord delivery error: {exc}", file=sys.stderr)
-            return False
+        settings = self.ledger.get_settings()
+        target = settings.get("discord_alerts_target", "discord:alerts-and-logs")
+        return send_discord_alert(message, target=target)
 
     def _deliver_file(self, message: str) -> bool:
         out_path = Path(
@@ -585,7 +736,7 @@ def run_heartbeat(
     accounts: Optional[list[str]] = None,
     days: Optional[int] = None,
 ) -> None:
-    """Run a single heartbeat email check.
+    """Run a single heartbeat check: processes local inbox files AND checks VIP emails.
 
     Args:
         config: Founder Signal configuration.
@@ -594,8 +745,11 @@ def run_heartbeat(
     """
     watcher = InboxWatcher(config)
     try:
+        local_count = watcher.scan()
+        if local_count:
+            print(f"[founder-signal] Processed {local_count} local inbox file(s).")
         fetched = watcher.heartbeat_email(accounts, days=days)
-        print(f"[founder-signal] Heartbeat complete: {fetched} email(s) fetched and processed.")
+        print(f"[founder-signal] Heartbeat complete: {fetched} VIP email(s) fetched and processed.")
     finally:
         watcher.close()
 
@@ -611,6 +765,9 @@ def run_briefing(config: Config, target: Optional[str] = None) -> None:
     try:
         briefing = watcher.generate_briefing()
         print(briefing.summary)
-        watcher.deliver_briefing(briefing, target=target)
+        settings = watcher.ledger.get_settings()
+        target = target or settings.get("discord_alerts_target", "discord:alerts-and-logs")
+        app_url = settings.get("app_url", "http://127.0.0.1:5000")
+        notify_morning_briefing(briefing, target=target, app_url=app_url)
     finally:
         watcher.close()

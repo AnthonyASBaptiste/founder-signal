@@ -198,3 +198,24 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
         f"{len(result.issues)} issue(s) needing review."
     )
     return result
+
+
+def build_pending_change(existing: Commitment, proposed: Commitment, issue_description: str) -> dict:
+    """Format structured diff for pending changes so the UI clearly shows what evolved."""
+    diff_parts = []
+    if existing.due_date != proposed.due_date:
+        diff_parts.append(f"Deadline moved: {existing.due_date or 'No date'} → {proposed.due_date or 'No date'}")
+    if existing.owner != proposed.owner:
+        diff_parts.append(f"Owner reassigned: {existing.owner or 'Unassigned'} → {proposed.owner or 'Unassigned'}")
+    diff_summary = "; ".join(diff_parts) or issue_description
+    return {
+        "due_date": proposed.due_date,
+        "owner": proposed.owner,
+        "evidence": proposed.evidence,
+        "description": issue_description,
+        "diff_summary": diff_summary,
+        "old_due_date": existing.due_date,
+        "new_due_date": proposed.due_date,
+        "old_owner": existing.owner,
+        "new_owner": proposed.owner,
+    }

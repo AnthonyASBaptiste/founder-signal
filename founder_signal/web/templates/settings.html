@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="settings-container" style="max-width: 860px; margin: 2rem auto; padding: 0 1.5rem;">
+  <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1rem;">
+    <h2 style="font-family: var(--font-serif); font-size: 1.85rem; margin: 0 0 0.5rem 0; color: var(--color-text);">Cockpit Settings</h2>
+    <p style="color: var(--color-text-secondary); margin: 0; font-size: 0.95rem;">
+      Configure who matters, predictable scan rules, daily digest timing, and learned filters.
+    </p>
+  </div>
+
+  <form method="POST" action="{{ url_for('settings_view') }}" style="display: flex; flex-direction: column; gap: 2rem;">
+    <input type="hidden" name="action" value="save">
+
+    <!-- Section 1: Who Matters (Item 1) -->
+    <section class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin: 0 0 0.35rem 0; color: var(--color-text); display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: var(--color-brand);">✦</span> 1. Who Matters: People &amp; VIP Criteria
+        </h3>
+        <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
+          The mail ingestion engine focuses on these individuals, mentors, and partner organizations.
+        </p>
+      </div>
+
+      <!-- Quick People Roster -->
+      <div style="background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+        <h4 style="font-size: 0.95rem; font-family: var(--font-serif); margin: 0 0 0.75rem 0; color: var(--color-text);">Key Contacts by Role</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.75rem;">
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Co-Founder</label>
+            <input type="text" name="cofounder_name" value="Tishana Simon" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+            <input type="email" name="cofounder_email" value="tishana@research-navigator.ai" placeholder="Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Mentor</label>
+            <input type="text" name="mentor_name" value="Keneisha Browne" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+            <input type="email" name="mentor_email" value="keneisha_browne@hotmail.com" placeholder="Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+          </div>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Accelerator / Key Partner Domain</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <input type="text" name="partner_name" value="Point Lisas Nitrogen (PLNL)" placeholder="Organization Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <input type="text" name="partner_domain" value="plnl.co.tt" placeholder="domain (without @)" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+          </div>
+        </div>
+      </div>
+
+      <!-- Specific Text Lists -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            All VIP Email Addresses <span style="font-weight: normal; color: var(--color-text-muted);">(one per line)</span>
+          </label>
+          <textarea name="vip_emails" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_emails', [])|join('\n') }}</textarea>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            VIP Domains <span style="font-weight: normal; color: var(--color-text-muted);">(one per line, without @)</span>
+          </label>
+          <textarea name="vip_domains" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_domains', [])|join('\n') }}</textarea>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          VIP Projects &amp; Keywords <span style="font-weight: normal; color: var(--color-text-muted);">(one per line)</span>
+        </label>
+        <textarea name="vip_keywords" rows="3" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_keywords', [])|join('\n') }}</textarea>
+        <span style="font-size: 0.775rem; color: var(--color-text-muted);">Emails matching these in subject or sender name will be captured (e.g. Future Caribbean, Omni Caribbean)</span>
+      </div>
+
+      <!-- Scan Rules & Direct Address -->
+      <div style="padding-top: 1rem; border-top: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 0.75rem;">
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+          <input type="checkbox" name="only_scan_vip" value="true" {% if settings.get('only_scan_vip', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
+          <strong>Only scan these senders</strong> (drops incoming marketing, unsolicited sales, and cold emails)
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+          <input type="checkbox" name="include_directly_addressed" value="true" {% if settings.get('include_directly_addressed', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
+          <strong>Also include messages I'm directly addressed on</strong> (captures personal emails directed to you even if not in the VIP list)
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+          <input type="checkbox" name="auto_ignore_bulk" value="true" {% if settings.get('auto_ignore_bulk', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
+          <strong>Auto-ignore bulk and automated mail</strong> (automatically drops <code>noreply@</code> and bulk automated mail)
+        </label>
+      </div>
+
+      <!-- Filter Predictability Counter -->
+      <div style="margin-top: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md); padding: 0.85rem 1.15rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.15rem;">🛡️</span>
+          <span style="font-size: 0.875rem; color: #334155;">
+            <strong>Filter Predictability:</strong> <strong>{{ settings.get('excluded_count', 0) }}</strong> messages excluded by VIP criteria.
+          </span>
+        </div>
+        <button type="submit" name="action" value="reset_excluded" class="btn btn-sm btn-outline" style="font-size: 0.8rem;">
+          Reset Counter
+        </button>
+      </div>
+    </section>
+
+    <!-- Section 2: Scheduled Executive Digest (Item 5) -->
+    <section class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="margin-bottom: 1.25rem;">
+        <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin: 0 0 0.35rem 0; color: var(--color-text); display: flex; align-items: center; gap: 0.5rem;">
+          <span style="color: var(--color-urgent);">☀️</span> 2. Executive Digest &amp; Schedule Tuning
+        </h3>
+        <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
+          Get one high-signal morning brief instead of a noisy stream of alerts. Only items crossing your threshold will ping you.
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            Morning Digest Delivery Time
+          </label>
+          <input type="time" name="digest_time" value="{{ settings.get('digest_time', '08:00') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Pushes briefing to Discord at this hour</span>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            "Due Soon" Alert Horizon <span style="font-weight: normal; color: var(--color-text-muted);">(days)</span>
+          </label>
+          <input type="number" name="due_soon_days" min="1" max="14" value="{{ settings.get('due_soon_days', 3) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Items due within X days appear in Do Now</span>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            Mail Heartbeat Frequency <span style="font-weight: normal; color: var(--color-text-muted);">(mins)</span>
+          </label>
+          <input type="number" name="check_interval_mins" min="5" max="180" value="{{ settings.get('check_interval_mins', 15) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Checks for new VIP correspondence</span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            Discord Alert Target
+          </label>
+          <input type="text" name="discord_alerts_target" value="{{ settings.get('discord_alerts_target', 'discord:alerts-and-logs') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Format: <code>discord:alerts-and-logs</code></span>
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            Cockpit App URL
+          </label>
+          <input type="text" name="app_url" value="{{ settings.get('app_url', 'https://founder-signal.builtbyanthony.tech') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <span style="font-size: 0.75rem; color: var(--color-text-muted);">Direct link embedded in Discord digest</span>
+        </div>
+      </div>
+
+      <div style="padding-top: 0.85rem; border-top: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1.25rem;">
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+          <input type="checkbox" name="digest_enabled" value="true" {% if settings.get('digest_enabled', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
+          <strong>Enable scheduled morning executive briefing</strong>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 0.65rem; cursor: pointer; font-size: 0.9rem; color: var(--color-text);">
+          <input type="checkbox" name="digest_threshold_only" value="true" {% if settings.get('digest_threshold_only', True) %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--color-brand);">
+          <strong>Threshold-only digest:</strong> only deliver digest when actions require attention (e.g. Do Now &gt; 0 or Proposed Changes &gt; 0)
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button type="submit" class="btn" style="background: var(--color-brand); color: #fff; padding: 0.6rem 1.25rem; border-radius: var(--radius-md); font-weight: 600; border: none; cursor: pointer;">
+          Save Settings
+        </button>
+        <button type="submit" name="action" value="test_digest" class="btn btn-outline" style="background: transparent; color: var(--color-text); border: 1px solid var(--color-border); padding: 0.6rem 1.15rem; border-radius: var(--radius-md); font-weight: 500; cursor: pointer;">
+          Send Test Briefing to Discord
+        </button>
+      </div>
+    </section>
+  </form>
+
+  <!-- Section 3: Learned Rules & Approved Exclusions (Item 6) -->
+  {% set excluded_senders = settings.get('excluded_senders', []) %}
+  {% set excluded_domains = settings.get('excluded_domains', []) %}
+  <section class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem; margin-top: 2rem;">
+    <div style="margin-bottom: 1rem;">
+      <h3 style="font-family: var(--font-serif); font-size: 1.25rem; margin: 0 0 0.35rem 0; color: var(--color-text); display: flex; align-items: center; gap: 0.5rem;">
+        <span>💡</span> 3. Learned Rules &amp; Approved Exclusions
+      </h3>
+      <p style="color: var(--color-text-secondary); font-size: 0.875rem; margin: 0;">
+        Founder Signal never silently hides senders based on guesses. Rules are only added here when you approve suggestions.
+      </p>
+    </div>
+
+    {% if excluded_senders or excluded_domains %}
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+      {% for sender in excluded_senders %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.875rem;">
+        <div>
+          <span class="badge badge-ignore" style="margin-right: 0.5rem;">Excluded Sender</span>
+          <code>{{ sender }}</code>
+        </div>
+        <form method="POST" action="{{ url_for('settings_view') }}" style="display: inline;">
+          <input type="hidden" name="action" value="remove_exclusion">
+          <input type="hidden" name="pattern" value="{{ sender }}">
+          <button type="submit" class="btn btn-sm btn-outline" style="color: var(--color-error); border-color: var(--color-error); font-size: 0.775rem;">Remove</button>
+        </form>
+      </div>
+      {% endfor %}
+
+      {% for domain in excluded_domains %}
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0.85rem; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.875rem;">
+        <div>
+          <span class="badge badge-ignore" style="margin-right: 0.5rem;">Excluded Domain</span>
+          <code>@{{ domain }}</code>
+        </div>
+        <form method="POST" action="{{ url_for('settings_view') }}" style="display: inline;">
+          <input type="hidden" name="action" value="remove_exclusion">
+          <input type="hidden" name="pattern" value="{{ domain }}">
+          <button type="submit" class="btn btn-sm btn-outline" style="color: var(--color-error); border-color: var(--color-error); font-size: 0.775rem;">Remove</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p style="font-size: 0.85rem; color: var(--color-text-secondary); margin: 0;">
+      No learned exclusions yet. As you dismiss non-essential items in your cockpit, rule suggestions will appear for your approval.
+    </p>
+    {% endif %}
+  </section>
+
+  <!-- Section 4: Ledger Hygiene & Reset -->
+  <section class="card" style="background: #fff8f8; border: 1px solid #fed7d7; border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 2rem;">
+    <h3 style="font-family: var(--font-serif); font-size: 1.15rem; margin: 0 0 0.35rem 0; color: var(--color-error);">
+      Ledger Maintenance
+    </h3>
+    <p style="color: var(--color-text-secondary); font-size: 0.85rem; margin: 0 0 1rem 0;">
+      Wipe existing commitments and sources if you need to start fresh after testing.
+    </p>
+    <form method="POST" action="{{ url_for('settings_view') }}" onsubmit="return confirm('Are you sure you want to clear all commitments and start over? This cannot be undone.');">
+      <input type="hidden" name="action" value="clear_ledger">
+      <button type="submit" style="background: var(--color-error); color: #fff; padding: 0.5rem 1rem; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer;">
+        Clear Ledger &amp; Start Over
+      </button>
+    </form>
+  </section>
+</div>
+{% endblock %}
