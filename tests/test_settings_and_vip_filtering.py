@@ -251,3 +251,223 @@ def test_digest_threshold_only_behavior():
         pending_proposals_count=0,
     )
     assert sent is True
+
+
+def test_settings_view_post_save_and_reset(tmp_path):
+    """Verify settings form submission saves settings and reset_excluded resets counter."""
+    from founder_signal.app import create_app
+    from founder_signal.ledger import open_ledger, SQLiteLedger
+
+    db_path = tmp_path / "test.db"
+    cfg = Config(ledger_backend="sqlite", ledger_sqlite_path=str(db_path))
+    ledger = open_ledger(cfg)
+    ledger.increment_excluded_count(5)
+    assert ledger.get_settings()["excluded_count"] == 5
+    ledger.close()
+
+    app = create_app(cfg)
+    client = app.test_client()
+
+    import os
+    if os.environ.get("FS_ADMIN_USER") and os.environ.get("FS_ADMIN_PASSWORD"):
+        client.post(
+            "/login",
+            data={
+                "username": os.environ["FS_ADMIN_USER"],
+                "password": os.environ["FS_ADMIN_PASSWORD"],
+            },
+        )
+
+    # 1. Standard POST to save settings
+    res = client.post(
+        "/settings",
+        data={
+            "action": "save",
+            "vip_emails": "mentor@example.com\ncofounder@example.com",
+            "vip_domains": "example.com",
+            "include_directly_addressed": "true",
+            "digest_time": "08:30",
+            "due_soon_days": "5",
+            "check_interval_mins": "30",
+        },
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+
+    ledger = open_ledger(cfg)
+    saved = ledger.get_settings()
+    assert "mentor@example.com" in saved["vip_emails"]
+    assert "example.com" in saved["vip_domains"]
+    assert saved["due_soon_days"] == 5
+    assert saved["excluded_count"] == 5
+    ledger.close()
+
+    # 2. Reset counter via dedicated action
+    res = client.post(
+        "/settings",
+        data={"action": "reset_excluded"},
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+
+    ledger = open_ledger(cfg)
+    assert ledger.get_settings()["excluded_count"] == 0
+    ledger.close()
+
+
+
+
+def test_api_reset_excluded_strict_json(tmp_path):
+    """Verify /api/settings/reset_excluded returns strict JSON even without JSON headers."""
+    from founder_signal.app import create_app
+    from founder_signal.ledger import open_ledger
+
+    db_path = tmp_path / "test.db"
+    cfg = Config(ledger_backend="sqlite", ledger_sqlite_path=str(db_path))
+    ledger = open_ledger(cfg)
+    ledger.increment_excluded_count(10)
+    ledger.close()
+
+    app = create_app(cfg)
+    client = app.test_client()
+
+    import os
+    if os.environ.get("FS_ADMIN_USER") and os.environ.get("FS_ADMIN_PASSWORD"):
+        client.post(
+            "/login",
+            data={
+                "username": os.environ["FS_ADMIN_USER"],
+                "password": os.environ["FS_ADMIN_PASSWORD"],
+            },
+        )
+
+    res = client.post("/api/settings/reset_excluded")
+    assert res.status_code == 200
+    assert res.is_json
+    data = res.get_json()
+    assert data == {"success": True, "excluded_count": 0}
+
+    ledger = open_ledger(cfg)
+    assert ledger.get_settings()["excluded_count"] == 0
+    ledger.close()
+
+
+def test_settings_post_missing_or_conflicting_action_safeguards(tmp_path):
+    """Verify POST without action does not overwrite settings, and conflicting actions are rejected."""
+    from founder_signal.app import create_app
+    from founder_signal.ledger import open_ledger
+
+    db_path = tmp_path / "test.db"
+    cfg = Config(ledger_backend="sqlite", ledger_sqlite_path=str(db_path))
+    ledger = open_ledger(cfg)
+    settings = ledger.get_settings()
+    settings["vip_emails"] = ["critical_vip@example.com"]
+    ledger.update_settings(settings)
+    ledger.close()
+
+    app = create_app(cfg)
+    client = app.test_client()
+
+    import os
+    if os.environ.get("FS_ADMIN_USER") and os.environ.get("FS_ADMIN_PASSWORD"):
+        client.post(
+            "/login",
+            data={
+                "username": os.environ["FS_ADMIN_USER"],
+                "password": os.environ["FS_ADMIN_PASSWORD"],
+            },
+        )
+
+    # 1. POST without action should NOT execute save and wipe settings
+    res = client.post("/settings", data={}, follow_redirects=True)
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "no valid action specified" in html.lower()
+
+    ledger = open_ledger(cfg)
+    assert "critical_vip@example.com" in ledger.get_settings()["vip_emails"]
+    ledger.close()
+
+    # 2. POST with conflicting actions should be rejected with an error
+    res = client.post(
+        "/settings",
+        data={"action": ["save", "reset_excluded"]},
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "conflicting actions" in html.lower()
+
+    # 3. Explicit POST with action="save" preserves dynamic state (rules, exclusions, counters)
+    ledger = open_ledger(cfg)
+    settings = ledger.get_settings()
+    settings["excluded_senders"] = ["spam@example.com"]
+    settings["suggested_rules"] = [{"pattern": "marketing@example.com", "action": "exclude"}]
+    ledger.update_settings(settings)
+    ledger.increment_excluded_count(7)
+    ledger.close()
+
+    res = client.post(
+        "/settings",
+        data={
+            "action": "save",
+            "vip_emails": "new_vip@example.com",
+            "due_soon_days": "999",  # Should be clamped to 14
+            "check_interval_mins": "1",  # Should be clamped to 5
+        },
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+
+    ledger = open_ledger(cfg)
+    saved = ledger.get_settings()
+    assert "new_vip@example.com" in saved["vip_emails"]
+    assert saved["due_soon_days"] == 14
+    assert saved["check_interval_mins"] == 5
+    # Concurrently updated dynamic fields must be preserved
+    assert saved["excluded_count"] == 7
+    assert saved["excluded_senders"] == ["spam@example.com"]
+    assert saved["suggested_rules"] == [{"pattern": "marketing@example.com", "action": "exclude"}]
+    ledger.close()
+
+    # 4. Unrecognized action should flash an error
+    res = client.post(
+        "/settings",
+        data={"action": "unknown_action"},
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    assert "unrecognized action" in html.lower()
+
+
+def test_settings_html_form_isolation(tmp_path):
+    """Verify settings.html template isolates Reset Counter button from the main settings form."""
+    from founder_signal.app import create_app
+
+    db_path = tmp_path / "test.db"
+    cfg = Config(ledger_backend="sqlite", ledger_sqlite_path=str(db_path))
+    app = create_app(cfg)
+    client = app.test_client()
+
+    import os
+    if os.environ.get("FS_ADMIN_USER") and os.environ.get("FS_ADMIN_PASSWORD"):
+        client.post(
+            "/login",
+            data={
+                "username": os.environ["FS_ADMIN_USER"],
+                "password": os.environ["FS_ADMIN_PASSWORD"],
+            },
+        )
+
+    res = client.get("/settings")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+
+    assert '<form id="reset-counter-form"' in html
+    assert 'form="reset-counter-form"' in html
+    assert '<button type="submit" name="action" value="save"' in html
+
+
+
+

@@ -9,6 +9,11 @@
     </p>
   </div>
 
+  <!-- Dedicated form for resetting excluded counter (isolated from settings inputs) -->
+  <form id="reset-counter-form" method="POST" action="{{ url_for('settings_view') }}" style="display: none;" onsubmit="return confirm('Reset the excluded message counter to 0?');">
+    <input type="hidden" name="action" value="reset_excluded">
+  </form>
+
   <form method="POST" action="{{ url_for('settings_view') }}" style="display: flex; flex-direction: column; gap: 2rem;">
     <!-- Section 1: Who Matters (Item 1) -->
     <section class="card" style="background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
@@ -98,7 +103,7 @@
             <strong>Filter Predictability:</strong> <strong>{{ settings.get('excluded_count', 0) }}</strong> messages excluded by VIP criteria.
           </span>
         </div>
-        <button type="submit" name="action" value="reset_excluded" class="btn btn-sm btn-outline" style="font-size: 0.8rem;">
+        <button type="submit" form="reset-counter-form" class="btn btn-sm btn-outline" style="font-size: 0.8rem;">
           Reset Counter
         </button>
       </div>
