@@ -426,10 +426,73 @@
       letter-spacing: 0.03em;
     }
     .badge-open { background: var(--color-brand-surface); color: var(--color-brand); }
+    .badge-in_progress, .badge-in-progress { background: #e0f2fe; color: #0369a1; }
     .badge-done { background: var(--color-success-surface); color: var(--color-success); }
     .badge-waiting { background: var(--color-warning-surface); color: var(--color-warning); }
     .badge-deferred { background: #f5f5f4; color: #57534e; }
     .badge-ignore { background: #f5f5f4; color: #78716c; }
+
+    /* Interactive Status & Owner Selectors */
+    .status-select {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid transparent;
+      border-radius: var(--radius-full, 9999px);
+      padding: 0.22rem 1.6rem 0.22rem 0.65rem;
+      font-family: var(--font-sans);
+      font-size: 0.775rem;
+      font-weight: 600;
+      cursor: pointer;
+      background-repeat: no-repeat;
+      background-position: right 0.45rem center;
+      background-size: 0.65rem auto;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2357534e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      transition: all 0.15s ease;
+    }
+    .status-select:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--color-brand-surface), 0 0 0 3px var(--color-brand);
+    }
+    .status-select-open { background-color: var(--color-brand-surface); color: var(--color-brand); border-color: var(--color-brand-border); }
+    .status-select-in_progress { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+    .status-select-done { background-color: var(--color-success-surface); color: var(--color-success); border-color: #bbf7d0; }
+    .status-select-waiting { background-color: var(--color-warning-surface); color: var(--color-warning); border-color: #fde68a; }
+    .status-select-deferred { background-color: #f5f5f4; color: #57534e; border-color: #e7e5e4; }
+    .status-select-ignore { background-color: #f5f5f4; color: #78716c; border-color: #e7e5e4; }
+
+    .owner-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm, 4px);
+      padding: 0.25rem 1.4rem 0.25rem 0.5rem;
+      font-family: var(--font-sans);
+      font-size: 0.825rem;
+      font-weight: 500;
+      color: var(--color-text);
+      cursor: pointer;
+      max-width: 160px;
+      background-repeat: no-repeat;
+      background-position: right 0.35rem center;
+      background-size: 0.6rem auto;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .owner-select:hover {
+      border-color: var(--color-brand);
+    }
+    .owner-select:focus {
+      outline: none;
+      border-color: var(--color-brand);
+      box-shadow: 0 0 0 2px var(--color-brand-surface);
+    }
+    .owner-select-unassigned {
+      color: var(--color-urgent);
+      background-color: var(--color-urgent-surface);
+      border-color: var(--color-urgent-border);
+      font-weight: 600;
+    }
 
     /* Subtle Evidence Quotation with Provenance */
     .evidence-block {

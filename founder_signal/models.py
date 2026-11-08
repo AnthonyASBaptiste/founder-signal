@@ -86,7 +86,7 @@ class Commitment:
     direction: Optional[str] = None  # "user_committing" | "user_requested" | "third_party"
     decision: Optional[str] = None
     follow_up: Optional[str] = None
-    status: str = "open"  # open | done | waiting | deferred | ignore
+    status: str = "open"  # open | in_progress | done | waiting | deferred | ignore
     evidence: str = ""  # verbatim quote from source
     pending_change: Optional[dict] = None  # pending proposed updates awaiting human review
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

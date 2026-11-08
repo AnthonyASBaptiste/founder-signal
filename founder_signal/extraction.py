@@ -56,24 +56,31 @@ class ExtractionResult:
 # message.
 SKILL_SYSTEM_PROMPT = """You are the Founder Signal skill, a specialist agent for founders who receive more information, requests and opportunities than they have time to process.
 
-Your job: read source material (email text, voice-note transcripts, meeting transcripts) and extract ONLY commitments that are directed at or made by the founder (the recipient of this message).
+Your job: read source material (email text, voice-note transcripts, meeting transcripts) and extract commitments, deadlines, deliverables, and follow-ups.
 
-First, identify who the founder/recipient is from the email headers (To:, Cc:) or the body context. Then extract ONLY:
+The founder/user is Anthony Baptiste (known emails: anthony.baptiste@outlook.com, anthony@research-navigator.ai, anthony.as.baptiste@gmail.com).
 
-- Commitments the founder is making ("I will do X", "I'll send Y")
-- Commitments others are making TO the founder ("Please review this", "I will send you the contract")
-- Commitments where the founder is clearly the intended owner or beneficiary
+Identify the founder's role from headers (From, To, Cc, Bcc) or context:
+1. When the founder makes a commitment ("I will do X", "I'll send Y"):
+   - Set direction = "user_committing", owner = "Anthony Baptiste".
+2. When a request is directly addressed to the founder as the primary recipient (To:):
+   - Set direction = "user_requested", owner = "Anthony Baptiste".
+3. When the founder is CC'd or BCC'd on an email:
+   - DO NOT automatically assume the founder is the responsible party!
+   - DO look out for and extract commitments, deliverables, and promises made by others (e.g. sender promising deliverables, or tasks assigned to other team members).
+   - Set direction = "third_party".
+   - Set owner = the person responsible (the sender who committed, or the specific recipient asked), so the founder can track deliverables and follow up.
+   - Only assign the founder as owner if the request explicitly names the founder (e.g. "Anthony, please review...").
 
 Do NOT extract:
 - General statements, newsletters, marketing content, or FYI information
-- Commitments between third parties that don't involve the founder
 - Auto-generated text, signatures, disclaimers, or boilerplate
 - Statements that are just information sharing, not action items
 
 For each commitment, determine the direction:
 - "user_committing" — the founder promised to do something
 - "user_requested" — someone asked the founder to do something
-- "third_party" — someone else committed to do something for the founder
+- "third_party" — someone else committed or was assigned a deliverable to follow up on
 
 Output structured JSON only, with this exact schema:
 {
@@ -91,7 +98,7 @@ Rules:
 - Never invent an owner; use null when not stated.
 - evidence must be a verbatim quote from the source text.
 - Do not send messages, accept commitments, or mark anything complete. You only propose.
-- Be conservative: extract only what is explicitly stated and directed at the founder."""
+- Be conservative: extract only what is explicitly stated and actionable."""
 
 
 def _now_iso() -> str:
@@ -284,29 +291,70 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
             continue
         cleaned.append(stripped)
 
-    # --- Identify the founder from headers ---
-    has_headers = any(
-        re.match(r"^(From|To|Cc|Bcc|Subject|Date):\s", line.strip(), re.IGNORECASE)
-        for line in body.splitlines()
-    )
-    founder_in_to = not has_headers  # Default to primary recipient if no headers
-    founder_in_cc = False
-    for line in body.splitlines():
-        low = line.lower()
-        if low.startswith("to:") or low.startswith("cc:"):
-            if founder_name.lower() in low:
-                if low.startswith("to:"):
-                    founder_in_to = True
-                else:
-                    founder_in_cc = True
-            if founder_email and founder_email.lower() in low:
-                if low.startswith("to:"):
-                    founder_in_to = True
-                else:
-                    founder_in_cc = True
+    # --- Parse email headers ---
+    sender_name: Optional[str] = None
+    sender_email: Optional[str] = None
+    to_recipients: list[tuple[str, str]] = []  # (name, email)
+    cc_recipients: list[tuple[str, str]] = []
+    bcc_recipients: list[tuple[str, str]] = []
 
-    founder_is_primary = founder_in_to  # founder is the main recipient
-    founder_is_recipient = founder_in_to or founder_in_cc  # founder is To or Cc
+    def _parse_addr_line(val: str) -> list[tuple[str, str]]:
+        res = []
+        for part in val.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            m_angle = re.search(r"^(.*?)\s*<([^>]+)>$", part)
+            if m_angle:
+                n = m_angle.group(1).strip().strip('"').strip("'")
+                e = m_angle.group(2).strip().lower()
+                res.append((n or e, e))
+            elif "@" in part:
+                res.append(("", part.lower()))
+            else:
+                res.append((part, ""))
+        return res
+
+    for line in body.splitlines():
+        s = line.strip()
+        m_h = re.match(r"^(From|To|Cc|Bcc):\s*(.+)$", s, re.IGNORECASE)
+        if m_h:
+            h_name = m_h.group(1).lower()
+            h_val = m_h.group(2).strip()
+            addrs = _parse_addr_line(h_val)
+            if h_name == "from" and addrs:
+                sender_name, sender_email = addrs[0]
+            elif h_name == "to":
+                to_recipients.extend(addrs)
+            elif h_name == "cc":
+                cc_recipients.extend(addrs)
+            elif h_name == "bcc":
+                bcc_recipients.extend(addrs)
+
+    has_headers = bool(sender_name or sender_email or to_recipients or cc_recipients or bcc_recipients)
+    founder_first = founder_name.split()[0].lower() if " " in founder_name else founder_name.lower()
+
+    def _matches_founder(name: str, email: str) -> bool:
+        if email and cfg.is_founder_email(email):
+            return True
+        if name:
+            n_low = name.lower()
+            if re.search(rf"\b{re.escape(founder_name.lower())}\b", n_low):
+                return True
+            if re.search(rf"\b{re.escape(founder_first)}\b", n_low):
+                return True
+        return False
+
+    founder_is_sender = _matches_founder(sender_name or "", sender_email or "")
+    founder_in_to = any(_matches_founder(n, e) for n, e in to_recipients)
+    founder_in_cc = any(_matches_founder(n, e) for n, e in cc_recipients)
+    founder_in_bcc = any(_matches_founder(n, e) for n, e in bcc_recipients)
+
+    if not has_headers:
+        founder_in_to = True
+
+    founder_is_primary = founder_in_to and not founder_is_sender
+    founder_is_cc_or_bcc = (founder_in_cc or founder_in_bcc) and not founder_in_to
 
     # --- Date patterns ---
     date_patterns = [
@@ -372,35 +420,53 @@ def _rule_based_extract(source: Source, config: Optional[Config] = None,
         if not is_self_commit and not is_request:
             continue
 
-        # Determine direction
-        # Use word-boundary matching so "Anthony" doesn't false-match "Anthony's"
-        # or "Anthonette" in speaker labels.
+        # Determine speaker and direction
+        effective_speaker = None
+        if current_speaker:
+            effective_speaker = current_speaker
+        elif has_headers:
+            if founder_is_sender:
+                effective_speaker = founder_name
+            else:
+                effective_speaker = sender_name or (sender_email.split('@')[0].capitalize() if sender_email else None)
+
         is_founder_speaking = bool(
-            (not current_speaker and founder_is_primary)
-            or (
-                current_speaker
-                and founder_name
-                and re.search(rf"\b{re.escape(founder_name.lower())}\b", current_speaker.lower())
-            )
+            (effective_speaker and _matches_founder(effective_speaker, ""))
+            or (not has_headers and not current_speaker and founder_is_primary)
         )
+
+        owner = None
+        direction = None
 
         if is_self_commit:
             if is_founder_speaking:
                 direction = "user_committing"
                 owner = founder_name
             else:
-                # Someone else committing - only relevant if for the founder
                 direction = "third_party"
-                owner = current_speaker
+                owner = effective_speaker or current_speaker or (sender_name if sender_name else "Sender")
         elif is_request:
-            # Only treat as user_requested if founder is the primary recipient (To:).
-            # If founder is only Cc'd, requests are likely for someone else.
-            if founder_is_primary:
+            # Check for explicit person name at start of request line (e.g. "Anthony, please..." or "Sarah, can you...")
+            m_target = re.match(r"^([A-Za-z][A-Za-z\s'’\-]+?)[,:]\s+(?:please|can you|could you|would you)\b", line, re.IGNORECASE)
+            explicit_target = m_target.group(1).strip() if m_target else None
+
+            if explicit_target:
+                if _matches_founder(explicit_target, ""):
+                    direction = "user_requested"
+                    owner = founder_name
+                else:
+                    direction = "third_party"
+                    owner = explicit_target
+            elif founder_is_primary or not has_headers:
                 direction = "user_requested"
                 owner = founder_name
+            elif founder_is_cc_or_bcc or (has_headers and not founder_in_to):
+                # Founder is CC'd or BCC'd; deliverable assigned to primary recipient or other team member
+                direction = "third_party"
+                owner = to_recipients[0][0] if (to_recipients and to_recipients[0][0]) else "Team"
             else:
-                # Request directed at someone else, skip
-                continue
+                direction = "third_party"
+                owner = to_recipients[0][0] if (to_recipients and to_recipients[0][0]) else None
 
         # Extract due date from the line
         due_date = None

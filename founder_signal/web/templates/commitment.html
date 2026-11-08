@@ -6,7 +6,7 @@
       <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">← Back to Cockpit</a>
       <h2 class="section-title" style="margin:0">Edit Commitment</h2>
     </div>
-    <span class="badge badge-{{ commitment.status }}">{{ commitment.status }}</span>
+    <span class="badge badge-{{ commitment.status }}" id="header-status-badge">{{ commitment.status }}</span>
   </div>
 
   {% if commitment.pending_change %}
@@ -54,8 +54,20 @@
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.85rem">
           <div>
-            <label for="field-owner">Owner</label>
-            <input type="text" id="field-owner" name="owner" value="{{ commitment.owner or '' }}" placeholder="e.g. co-founder">
+            <label for="field-owner-select">Assignee / Owner</label>
+            <select id="field-owner-select" name="owner_select" onchange="toggleCustomOwner(this)">
+              <option value="" {% if not commitment.owner %}selected{% endif %}>Unassigned</option>
+              <option value="Anthony Baptiste" {% if commitment.owner in ('Anthony Baptiste', 'Anthony', 'me', 'myself') %}selected{% endif %}>Anthony Baptiste (Myself)</option>
+              <option value="Tishana Simon" {% if commitment.owner == 'Tishana Simon' %}selected{% endif %}>Tishana Simon</option>
+              {% if commitment.owner and commitment.owner not in ('Anthony Baptiste', 'Anthony', 'me', 'myself', 'Tishana Simon') %}
+              <option value="{{ commitment.owner }}" selected>{{ commitment.owner }}</option>
+              {% endif %}
+              <option value="__custom__">+ Add new person...</option>
+            </select>
+            <div id="custom-owner-wrap" style="margin-top:0.4rem; display:none;">
+              <input type="text" id="field-owner-custom" name="owner_custom" placeholder="Type new person's name...">
+            </div>
+            <input type="hidden" id="field-owner" name="owner" value="{{ commitment.owner or '' }}">
           </div>
           <div>
             <label for="field-due-date">Due date</label>
@@ -66,6 +78,7 @@
         <label for="field-status">Status</label>
         <select id="field-status" name="status">
           <option value="open" {% if commitment.status == 'open' %}selected{% endif %}>Open</option>
+          <option value="in_progress" {% if commitment.status == 'in_progress' %}selected{% endif %}>In Progress</option>
           <option value="done" {% if commitment.status == 'done' %}selected{% endif %}>Done</option>
           <option value="waiting" {% if commitment.status == 'waiting' %}selected{% endif %}>Waiting</option>
           <option value="deferred" {% if commitment.status == 'deferred' %}selected{% endif %}>Deferred</option>
@@ -78,7 +91,9 @@
         <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
 
         <div style="display:flex; gap:0.65rem; margin-top:0.75rem; flex-wrap:wrap">
-          <button type="submit" name="action" value="update" class="btn">Save Changes</button>
+          <button type="button" id="btn-save-ajax" class="btn" onclick="handleEditSave(false)">Save Changes</button>
+          <button type="button" id="btn-save-return-ajax" class="btn btn-outline" style="border-color:var(--color-brand); color:var(--color-brand)" onclick="handleEditSave(true)">Save &amp; Return</button>
+          <button type="submit" name="action" value="update" id="btn-save-fallback" class="btn" style="display:none">Save Changes (Fallback)</button>
           <button type="submit" name="action" value="confirm" class="btn btn-outline">Confirm (No Change)</button>
         </div>
       </form>
@@ -102,5 +117,111 @@
     </aside>
     {% endif %}
   </div>
+
+  <script>
+    function toggleCustomOwner(selectEl) {
+      const customWrap = document.getElementById('custom-owner-wrap');
+      const customInput = document.getElementById('field-owner-custom');
+      const hiddenInput = document.getElementById('field-owner');
+      if (selectEl.value === '__custom__') {
+        customWrap.style.display = 'block';
+        customInput.focus();
+        hiddenInput.value = customInput.value.trim();
+      } else {
+        customWrap.style.display = 'none';
+        hiddenInput.value = selectEl.value;
+      }
+    }
+
+    document.getElementById('field-owner-custom')?.addEventListener('input', function() {
+      document.getElementById('field-owner').value = this.value.trim();
+    });
+
+    function handleEditSave(returnToDashboard) {
+      const saveBtn = document.getElementById('btn-save-ajax');
+      const saveReturnBtn = document.getElementById('btn-save-return-ajax');
+      const originalText = saveBtn.textContent;
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      if (saveReturnBtn) saveReturnBtn.disabled = true;
+
+      const selectEl = document.getElementById('field-owner-select');
+      let ownerVal = selectEl.value;
+      if (ownerVal === '__custom__') {
+        ownerVal = document.getElementById('field-owner-custom').value.trim();
+      }
+
+      const payload = {
+        description: document.getElementById('field-description').value,
+        owner: ownerVal,
+        due_date: document.getElementById('field-due-date').value,
+        status: document.getElementById('field-status').value,
+        evidence: document.getElementById('field-evidence').value
+      };
+
+      fetch('/api/commitments/{{ commitment.id }}/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          saveBtn.textContent = 'Saved ✓';
+          showToast('Changes saved.');
+          const badge = document.getElementById('header-status-badge');
+          if (badge) {
+            badge.className = 'badge badge-' + payload.status;
+            badge.textContent = payload.status;
+          }
+          if (returnToDashboard) {
+            setTimeout(() => {
+              window.location.href = "{{ url_for('dashboard') }}";
+            }, 180);
+          } else {
+            setTimeout(() => {
+              saveBtn.disabled = false;
+              saveBtn.textContent = originalText;
+              if (saveReturnBtn) saveReturnBtn.disabled = false;
+            }, 1200);
+          }
+        } else {
+          saveBtn.disabled = false;
+          saveBtn.textContent = originalText;
+          if (saveReturnBtn) saveReturnBtn.disabled = false;
+          showToast('Error: ' + (data.error || 'Failed to save'), true);
+        }
+      })
+      .catch(err => {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+        if (saveReturnBtn) saveReturnBtn.disabled = false;
+        showToast('Network error saving changes', true);
+      });
+    }
+
+    function showToast(message, isError) {
+      let toast = document.getElementById('fs-toast-simple');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'fs-toast-simple';
+        toast.style.cssText = 'position:fixed; bottom:28px; right:28px; z-index:9999; padding:0.75rem 1.25rem; border-radius:8px; font-weight:600; font-size:0.875rem; box-shadow:0 4px 16px rgba(0,0,0,0.18); transition:all 0.25s ease; transform:translateY(10px); opacity:0; pointer-events:none;';
+        document.body.appendChild(toast);
+      }
+      toast.style.background = isError ? 'var(--color-error)' : 'var(--color-brand)';
+      toast.style.color = '#ffffff';
+      toast.textContent = message;
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.transform = 'translateY(10px)';
+        toast.style.opacity = '0';
+      }, 3000);
+    }
+  </script>
 {% endblock %}
 

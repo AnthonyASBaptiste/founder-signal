@@ -99,7 +99,7 @@ def reconcile(ledger: Ledger, new_commitments: list[Commitment],
 
     Returns proposed changes; does not mutate the ledger.
     """
-    existing = ledger.list_commitments(status="open")
+    existing = [c for c in ledger.list_commitments() if c.status in ("open", "in_progress")]
     result = ReconciliationResult()
 
     for new in new_commitments:

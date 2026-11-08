@@ -64,10 +64,10 @@ def generate_briefing(
 
     fname = (founder_name or (getattr(config, "founder_name", None) or "")).strip().lower()
 
-    all_open = ledger.list_commitments(status="open")
+    all_active = [c for c in ledger.list_commitments() if c.status in ("open", "in_progress")]
     briefing = Briefing()
 
-    for c in all_open:
+    for c in all_active:
         if _is_overdue_or_due_today(c):
             briefing.do_now.append(c)
         elif _is_coming_up(c, coming_up_days):
