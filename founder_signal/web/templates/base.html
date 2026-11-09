@@ -1071,8 +1071,18 @@
       header { padding: 0.75rem 1rem; }
       header h1 { font-size: 1.2rem; }
       .cockpit-hero { padding: 1.25rem 1.15rem; }
-      .cockpit-headline { font-size: 1.5rem; }
+      .cockpit-headline { font-size: 1.35rem; line-height: 1.3; }
       .btn, .filter-pill { min-height: 38px; }
+      .table-container {
+        border-radius: var(--radius-md);
+        box-shadow: 0 1px 4px rgba(28, 25, 23, 0.05);
+      }
+      .commitments-table {
+        min-width: 640px;
+      }
+      th, td {
+        padding: 0.75rem 0.85rem;
+      }
     }
     @media (max-width: 480px) {
       header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
