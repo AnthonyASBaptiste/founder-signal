@@ -20,6 +20,10 @@ class Briefing:
     summary: str = ""
 
 
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
 def _is_overdue_or_due_today(commitment: Commitment) -> bool:
     if not commitment.due_date:
         return False
@@ -27,7 +31,7 @@ def _is_overdue_or_due_today(commitment: Commitment) -> bool:
         due = date.fromisoformat(commitment.due_date)
     except ValueError:
         return False
-    return due <= date.today()
+    return due <= _today()
 
 
 def _is_coming_up(commitment: Commitment, within_days: int = 7) -> bool:
@@ -37,7 +41,7 @@ def _is_coming_up(commitment: Commitment, within_days: int = 7) -> bool:
         due = date.fromisoformat(commitment.due_date)
     except ValueError:
         return False
-    today = date.today()
+    today = _today()
     return today < due <= today + timedelta(days=within_days)
 
 
