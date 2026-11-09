@@ -85,7 +85,7 @@
           <option value="ignore" {% if commitment.status == 'ignore' %}selected{% endif %}>Ignore</option>
         </select>
 
-        <label for="field-evidence">Evidence (verbatim quote from source)</label>
+        <label for="field-evidence">Evidence <span class="label-hint">(verbatim quote from source)</span></label>
         <textarea id="field-evidence" name="evidence" rows="4">{{ commitment.evidence }}</textarea>
 
         <input type="hidden" name="source_id" value="{{ commitment.source_id }}">
