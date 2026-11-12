@@ -436,7 +436,14 @@ def create_app(config: Config | None = None) -> Flask:
         try:
             settings = ledger.get_settings()
             if request.method == "POST":
-                action = request.form.get("action")
+                actions = request.form.getlist("action")
+                if len(set(actions)) > 1:
+                    flash("Invalid request: conflicting actions received.", "error")
+                    return redirect(url_for("settings_view"))
+                action = actions[0] if actions else None
+                if not action:
+                    flash("No valid action specified in request.", "error")
+                    return redirect(url_for("settings_view"))
                 if action == "save":
                     vip_emails = [e.strip().lower() for e in request.form.get("vip_emails", "").splitlines() if e.strip()]
                     vip_domains = [d.strip().lower().lstrip("@") for d in request.form.get("vip_domains", "").splitlines() if d.strip()]
@@ -489,27 +496,31 @@ def create_app(config: Config | None = None) -> Flask:
                         due_soon_days = int(request.form.get("due_soon_days") or 3)
                     except ValueError:
                         due_soon_days = 3
+                    due_soon_days = max(1, min(14, due_soon_days))
+
                     try:
                         check_interval_mins = int(request.form.get("check_interval_mins") or 15)
                     except ValueError:
                         check_interval_mins = 15
+                    check_interval_mins = max(5, min(180, check_interval_mins))
 
-                    settings["vip_people"] = vip_people
-                    settings["vip_emails"] = vip_emails
-                    settings["vip_domains"] = vip_domains
-                    settings["vip_keywords"] = vip_keywords
-                    settings["only_scan_vip"] = only_scan_vip
-                    settings["include_directly_addressed"] = include_directly_addressed
-                    settings["auto_ignore_bulk"] = auto_ignore_bulk
-                    settings["digest_enabled"] = digest_enabled
-                    settings["digest_time"] = digest_time
-                    settings["digest_threshold_only"] = digest_threshold_only
-                    settings["due_soon_days"] = due_soon_days
-                    settings["check_interval_mins"] = check_interval_mins
-                    settings["discord_alerts_target"] = discord_target
-                    settings["app_url"] = app_url
+                    current_settings = ledger.get_settings()
+                    current_settings["vip_people"] = vip_people
+                    current_settings["vip_emails"] = vip_emails
+                    current_settings["vip_domains"] = vip_domains
+                    current_settings["vip_keywords"] = vip_keywords
+                    current_settings["only_scan_vip"] = only_scan_vip
+                    current_settings["include_directly_addressed"] = include_directly_addressed
+                    current_settings["auto_ignore_bulk"] = auto_ignore_bulk
+                    current_settings["digest_enabled"] = digest_enabled
+                    current_settings["digest_time"] = digest_time
+                    current_settings["digest_threshold_only"] = digest_threshold_only
+                    current_settings["due_soon_days"] = due_soon_days
+                    current_settings["check_interval_mins"] = check_interval_mins
+                    current_settings["discord_alerts_target"] = discord_target
+                    current_settings["app_url"] = app_url
 
-                    ledger.update_settings(settings)
+                    ledger.update_settings(current_settings)
                     flash("Settings saved successfully.", "success")
                 elif action == "reset_excluded":
                     ledger.reset_excluded_count()
@@ -556,6 +567,8 @@ def create_app(config: Config | None = None) -> Flask:
                 elif action == "clear_ledger":
                     ledger.clear_ledger()
                     flash("Ledger cleared successfully. All past commitments and sources removed.", "info")
+                else:
+                    flash(f"Unrecognized action '{action}'.", "error")
                 return redirect(url_for("settings_view"))
         finally:
             ledger.close()
