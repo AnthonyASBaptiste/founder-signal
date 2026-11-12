@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-  {% set open_commitments = commitments|selectattr('status', 'equalto', 'open')|list %}
+  {% set open_commitments = commitments|selectattr('status', 'in', ['open', 'in_progress'])|list %}
+  {% set in_progress_commitments = commitments|selectattr('status', 'equalto', 'in_progress')|list %}
   {% set open_count = open_commitments|length %}
   {% set do_now_count = do_now|length %}
   {% set clarify_count = briefing.needs_clarification|length %}
@@ -53,9 +54,15 @@
       </div>
       {% endif %}
       <div class="metric-chip">
-        <span class="metric-chip-label">Open</span>
+        <span class="metric-chip-label">Active</span>
         <span class="metric-chip-value" id="metric-open">{{ open_count }}</span>
       </div>
+      {% if in_progress_commitments|length > 0 %}
+      <div class="metric-chip" style="background:#e0f2fe; border-color:#bae6fd;">
+        <span class="metric-chip-label" style="color:#0369a1;">In Progress</span>
+        <span class="metric-chip-value" id="metric-in-progress" style="color:#0369a1;">{{ in_progress_commitments|length }}</span>
+      </div>
+      {% endif %}
       <div class="metric-chip">
         <span class="metric-chip-label">Coming Up</span>
         <span class="metric-chip-value">{{ briefing.coming_up|length }}</span>
@@ -160,7 +167,7 @@
   <section class="section action-section" id="section-do-now" style="margin-bottom:2.25rem;" aria-label="Do Now Action List">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
       <div>
-        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0; flex-wrap:wrap;">
           <span style="color:var(--color-urgent);">⚡</span> Do Now: Overdue &amp; Due Soon
           <span class="badge badge-open" id="count-do-now" style="background:var(--color-urgent); color:#fff;">{{ do_now|length }}</span>
         </h3>
@@ -175,10 +182,10 @@
       <table id="do-now-table" class="commitments-table">
         <thead>
           <tr>
-            <th style="width:48%">Description &amp; Evidence</th>
-            <th style="width:14%">Owner</th>
-            <th style="width:14%">Due Date</th>
-            <th style="width:10%">Status</th>
+            <th style="width:44%">Description &amp; Evidence</th>
+            <th style="width:17%">Owner</th>
+            <th style="width:13%">Due Date</th>
+            <th style="width:12%">Status</th>
             <th style="width:14%">Actions</th>
           </tr>
         </thead>
@@ -203,16 +210,34 @@
               </div>
             </td>
             <td>
-              {% if c.owner %}
-                <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
-              {% else %}
-                <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
-              {% endif %}
+              <select class="owner-select {% if not c.owner %}owner-select-unassigned{% endif %}"
+                      data-id="{{ c.id }}"
+                      aria-label="Assign owner for {{ c.description }}"
+                      onchange="handleDashboardOwnerChange(event, '{{ c.id }}', this)">
+                <option value="" {% if not c.owner %}selected{% endif %}>Unassigned</option>
+                <option value="Anthony Baptiste" {% if c.owner in ('Anthony Baptiste', 'Anthony', 'me', 'myself') %}selected{% endif %}>Anthony Baptiste</option>
+                <option value="Tishana Simon" {% if c.owner == 'Tishana Simon' %}selected{% endif %}>Tishana Simon</option>
+                {% if c.owner and c.owner not in ('Anthony Baptiste', 'Anthony', 'me', 'myself', 'Tishana Simon') %}
+                <option value="{{ c.owner }}" selected>{{ c.owner }}</option>
+                {% endif %}
+              </select>
             </td>
             <td>
               <span class="due-pill due-pill-urgent" title="Immediate action required">⚡ {{ c.due_date or 'Due today' }}</span>
             </td>
-            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>
+              <select class="status-select status-select-{{ c.status }}"
+                      data-id="{{ c.id }}"
+                      aria-label="Change status for {{ c.description }}"
+                      onchange="handleDashboardStatusChange(event, '{{ c.id }}', this)">
+                <option value="open" {% if c.status == 'open' %}selected{% endif %}>Open</option>
+                <option value="in_progress" {% if c.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="done" {% if c.status == 'done' %}selected{% endif %}>Done</option>
+                <option value="waiting" {% if c.status == 'waiting' %}selected{% endif %}>Waiting</option>
+                <option value="deferred" {% if c.status == 'deferred' %}selected{% endif %}>Deferred</option>
+                <option value="ignore" {% if c.status == 'ignore' %}selected{% endif %}>Ignore</option>
+              </select>
+            </td>
             <td>
               <div class="actions-group">
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'done', this);">
@@ -245,7 +270,7 @@
   <section class="section action-section" id="section-active" style="margin-bottom:2.25rem;" aria-label="Active Commitments">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
       <div>
-        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+        <h3 class="section-title" style="display:flex; align-items:center; gap:0.5rem; margin:0; flex-wrap:wrap;">
           <span>✦</span> Active Commitments
           <span class="badge badge-open" id="count-active">{{ new_commitments|length }}</span>
         </h3>
@@ -259,10 +284,10 @@
       <table id="active-table" class="commitments-table">
         <thead>
           <tr>
-            <th style="width:48%">Description &amp; Evidence</th>
-            <th style="width:14%">Owner</th>
-            <th style="width:14%">Due Date</th>
-            <th style="width:10%">Status</th>
+            <th style="width:44%">Description &amp; Evidence</th>
+            <th style="width:17%">Owner</th>
+            <th style="width:13%">Due Date</th>
+            <th style="width:12%">Status</th>
             <th style="width:14%">Actions</th>
           </tr>
         </thead>
@@ -287,11 +312,17 @@
               </div>
             </td>
             <td>
-              {% if c.owner %}
-                <span style="font-weight:500; color:var(--color-text)">{{ c.owner }}</span>
-              {% else %}
-                <span style="color:var(--color-urgent); font-size:0.8rem; font-weight:600; background:var(--color-urgent-surface); padding:0.15rem 0.45rem; border-radius:var(--radius-sm); border:1px solid var(--color-urgent-border)">Unassigned</span>
-              {% endif %}
+              <select class="owner-select {% if not c.owner %}owner-select-unassigned{% endif %}"
+                      data-id="{{ c.id }}"
+                      aria-label="Assign owner for {{ c.description }}"
+                      onchange="handleDashboardOwnerChange(event, '{{ c.id }}', this)">
+                <option value="" {% if not c.owner %}selected{% endif %}>Unassigned</option>
+                <option value="Anthony Baptiste" {% if c.owner in ('Anthony Baptiste', 'Anthony', 'me', 'myself') %}selected{% endif %}>Anthony Baptiste</option>
+                <option value="Tishana Simon" {% if c.owner == 'Tishana Simon' %}selected{% endif %}>Tishana Simon</option>
+                {% if c.owner and c.owner not in ('Anthony Baptiste', 'Anthony', 'me', 'myself', 'Tishana Simon') %}
+                <option value="{{ c.owner }}" selected>{{ c.owner }}</option>
+                {% endif %}
+              </select>
             </td>
             <td>
               {% if c.due_date %}
@@ -300,7 +331,19 @@
                 <span style="color:var(--color-text-muted); font-size:0.825rem; font-style:italic">No date</span>
               {% endif %}
             </td>
-            <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+            <td>
+              <select class="status-select status-select-{{ c.status }}"
+                      data-id="{{ c.id }}"
+                      aria-label="Change status for {{ c.description }}"
+                      onchange="handleDashboardStatusChange(event, '{{ c.id }}', this)">
+                <option value="open" {% if c.status == 'open' %}selected{% endif %}>Open</option>
+                <option value="in_progress" {% if c.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="done" {% if c.status == 'done' %}selected{% endif %}>Done</option>
+                <option value="waiting" {% if c.status == 'waiting' %}selected{% endif %}>Waiting</option>
+                <option value="deferred" {% if c.status == 'deferred' %}selected{% endif %}>Deferred</option>
+                <option value="ignore" {% if c.status == 'ignore' %}selected{% endif %}>Ignore</option>
+              </select>
+            </td>
             <td>
               <div class="actions-group">
                 <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'done', this);">
@@ -341,10 +384,10 @@
           <table class="commitments-table">
             <thead>
               <tr>
-                <th style="width:48%">Description &amp; Evidence</th>
-                <th style="width:14%">Owner</th>
-                <th style="width:14%">Due Date</th>
-                <th style="width:10%">Status</th>
+                <th style="width:44%">Description &amp; Evidence</th>
+                <th style="width:17%">Owner</th>
+                <th style="width:13%">Due Date</th>
+                <th style="width:12%">Status</th>
                 <th style="width:14%">Actions</th>
               </tr>
             </thead>
@@ -364,7 +407,19 @@
                 </td>
                 <td><span style="color:var(--color-text-muted); font-size:0.85rem">{{ c.owner or '—' }}</span></td>
                 <td><span style="color:var(--color-text-muted); font-size:0.85rem">{{ c.due_date or '—' }}</span></td>
-                <td><span class="badge badge-{{ c.status }}">{{ c.status }}</span></td>
+                <td>
+                  <select class="status-select status-select-{{ c.status }}"
+                          data-id="{{ c.id }}"
+                          aria-label="Change status for {{ c.description }}"
+                          onchange="handleDashboardStatusChange(event, '{{ c.id }}', this)">
+                    <option value="open" {% if c.status == 'open' %}selected{% endif %}>Open</option>
+                    <option value="in_progress" {% if c.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="done" {% if c.status == 'done' %}selected{% endif %}>Done</option>
+                    <option value="waiting" {% if c.status == 'waiting' %}selected{% endif %}>Waiting</option>
+                    <option value="deferred" {% if c.status == 'deferred' %}selected{% endif %}>Deferred</option>
+                    <option value="ignore" {% if c.status == 'ignore' %}selected{% endif %}>Ignore</option>
+                  </select>
+                </td>
                 <td>
                   <div class="actions-group">
                     <form method="post" action="{{ url_for('commitment_status', commitment_id=c.id) }}" style="display:inline" onsubmit="return handleStatusChange(event, '{{ c.id }}', 'open', this);">
@@ -402,8 +457,8 @@
     }
 
     // Item 4: Instant 0ms status change with 6-second Undo option
-    function handleStatusChange(event, id, newStatus, formElement) {
-      if (event) event.preventDefault();
+    function handleStatusChange(event, id, newStatus, formElement, selectElement) {
+      if (event && event.preventDefault) event.preventDefault();
       const row = document.getElementById('commitment-row-' + id);
       if (!row) return true;
 
@@ -420,19 +475,21 @@
       }, 230);
 
       // Optimistic badge adjustments
-      if (prevStatus === 'open') {
+      if (prevStatus === 'open' || prevStatus === 'in_progress') {
         if (isDoNow) updateCounter('count-do-now', -1);
         else updateCounter('count-active', -1);
         updateCounter('metric-open', -1);
+        if (prevStatus === 'in_progress') updateCounter('metric-in-progress', -1);
         if (newStatus === 'done' || newStatus === 'ignore') {
           updateCounter('history-count', 1);
           updateCounter('metric-history', 1);
         }
-      } else if (newStatus === 'open') {
+      } else if (newStatus === 'open' || newStatus === 'in_progress') {
         updateCounter('history-count', -1);
         updateCounter('metric-history', -1);
         updateCounter('count-active', 1);
         updateCounter('metric-open', 1);
+        if (newStatus === 'in_progress') updateCounter('metric-in-progress', 1);
       }
 
       // Background asynchronous save
@@ -448,9 +505,9 @@
       .then(data => {
         if (data.success) {
           row.dataset.status = newStatus;
-          showToastWithUndo('Marked as ' + newStatus, () => {
+          showToastWithUndo('Marked as ' + (newStatus === 'in_progress' ? 'In Progress' : newStatus), () => {
             // Undo handler
-            handleUndo(id, prevStatus, row, isDoNow, newStatus);
+            handleUndo(id, prevStatus, row, isDoNow, newStatus, selectElement);
           });
 
           // Item 6: If repeated dismissal created a rule suggestion, notify user
@@ -459,19 +516,19 @@
           }
         } else {
           // Revert visual state
-          revertRow(row, isDoNow, prevStatus, newStatus);
+          revertRow(row, isDoNow, prevStatus, newStatus, selectElement);
           showToast('Error: ' + (data.error || 'Update failed'), true);
         }
       })
       .catch(err => {
-        revertRow(row, isDoNow, prevStatus, newStatus);
+        revertRow(row, isDoNow, prevStatus, newStatus, selectElement);
         showToast('Network error updating status', true);
       });
 
       return false;
     }
 
-    function handleUndo(id, targetStatus, row, isDoNow, failedStatus) {
+    function handleUndo(id, targetStatus, row, isDoNow, failedStatus, selectElement) {
       fetch('/api/commitments/' + encodeURIComponent(id) + '/status', {
         method: 'POST',
         headers: {
@@ -483,7 +540,7 @@
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          revertRow(row, isDoNow, targetStatus, failedStatus);
+          revertRow(row, isDoNow, targetStatus, failedStatus, selectElement);
           showToast('Action undone. Commitment restored.');
         } else {
           showToast('Failed to undo status', true);
@@ -494,23 +551,111 @@
       });
     }
 
-    function revertRow(row, isDoNow, originalStatus, changedStatus) {
+    function revertRow(row, isDoNow, originalStatus, changedStatus, selectElement) {
       row.style.display = '';
       row.dataset.status = originalStatus;
+      const statusSelect = selectElement || row.querySelector('.status-select');
+      if (statusSelect) {
+        statusSelect.value = originalStatus;
+        statusSelect.className = 'status-select status-select-' + originalStatus;
+      }
       setTimeout(() => {
         row.style.opacity = '1';
         row.style.transform = 'translateX(0)';
       }, 20);
 
-      if (originalStatus === 'open') {
+      if (originalStatus === 'open' || originalStatus === 'in_progress') {
         if (isDoNow) updateCounter('count-do-now', 1);
         else updateCounter('count-active', 1);
         updateCounter('metric-open', 1);
+        if (originalStatus === 'in_progress') updateCounter('metric-in-progress', 1);
         if (changedStatus === 'done' || changedStatus === 'ignore') {
           updateCounter('history-count', -1);
           updateCounter('metric-history', -1);
         }
       }
+    }
+
+    function handleDashboardOwnerChange(event, id, selectEl) {
+      const newOwner = selectEl.value;
+      if (!newOwner) {
+        selectEl.classList.add('owner-select-unassigned');
+      } else {
+        selectEl.classList.remove('owner-select-unassigned');
+      }
+
+      fetch('/api/commitments/' + encodeURIComponent(id) + '/owner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ owner: newOwner })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast(newOwner ? 'Assigned to ' + newOwner : 'Set to Unassigned');
+        } else {
+          showToast('Error: ' + (data.error || 'Assignment failed'), true);
+        }
+      })
+      .catch(() => {
+        showToast('Network error updating assignment', true);
+      });
+    }
+
+    function handleDashboardStatusChange(event, id, selectEl) {
+      const newStatus = selectEl.value;
+      const row = document.getElementById('commitment-row-' + id);
+      const prevStatus = row ? (row.dataset.status || 'open') : 'open';
+
+      // Update badge style class immediately
+      selectEl.className = 'status-select status-select-' + newStatus;
+
+      // When marking done or ignore, animate out of active list
+      if (newStatus === 'done' || newStatus === 'ignore' || (prevStatus === 'done' && newStatus !== 'done')) {
+        handleStatusChange(event, id, newStatus, null, selectEl);
+        return;
+      }
+
+      // For in_progress, open, waiting, deferred: keep row in place and update status asynchronously
+      if (row) {
+        row.dataset.status = newStatus;
+      }
+
+      // Adjust in-progress metric counter
+      if (prevStatus !== 'in_progress' && newStatus === 'in_progress') {
+        updateCounter('metric-in-progress', 1);
+      } else if (prevStatus === 'in_progress' && newStatus !== 'in_progress') {
+        updateCounter('metric-in-progress', -1);
+      }
+
+      fetch('/api/commitments/' + encodeURIComponent(id) + '/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          showToast('Marked as ' + (newStatus === 'in_progress' ? 'In Progress' : newStatus));
+        } else {
+          selectEl.value = prevStatus;
+          selectEl.className = 'status-select status-select-' + prevStatus;
+          if (row) row.dataset.status = prevStatus;
+          showToast('Error: ' + (data.error || 'Status update failed'), true);
+        }
+      })
+      .catch(() => {
+        selectEl.value = prevStatus;
+        selectEl.className = 'status-select status-select-' + prevStatus;
+        if (row) row.dataset.status = prevStatus;
+        showToast('Network error updating status', true);
+      });
     }
 
     // Item 3: 1-click in-place proposal accept/reject

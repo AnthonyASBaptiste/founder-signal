@@ -148,15 +148,15 @@ def create_app(config: Config | None = None) -> Flask:
         )
 
         # Categorize for the Small Daily Action List (Item 2)
-        open_commitments = [c for c in commitments if c.status == "open"]
-        pending_proposals = [c for c in open_commitments if c.pending_change]
+        active_commitments = [c for c in commitments if c.status in ("open", "in_progress")]
+        pending_proposals = [c for c in active_commitments if c.pending_change]
         proposal_ids = {c.id for c in pending_proposals}
         do_now = [c for c in briefing.do_now if c.id not in proposal_ids]
         do_now_ids = {c.id for c in do_now}
 
-        # New commitments: open commitments needing attention not in do_now or proposals
+        # New commitments: active commitments needing attention not in do_now or proposals
         new_commitments = [
-            c for c in open_commitments
+            c for c in active_commitments
             if c.id not in proposal_ids and c.id not in do_now_ids
         ]
 
@@ -202,9 +202,17 @@ def create_app(config: Config | None = None) -> Flask:
                 action = request.form.get("action")
                 if action == "update":
                     commitment.description = request.form.get("description", commitment.description)
-                    commitment.owner = request.form.get("owner") or None
+                    owner_select = request.form.get("owner_select")
+                    if owner_select == "__custom__":
+                        commitment.owner = (request.form.get("owner_custom") or "").strip() or None
+                    elif owner_select is not None:
+                        commitment.owner = owner_select.strip() or None
+                    else:
+                        commitment.owner = request.form.get("owner") or None
                     commitment.due_date = request.form.get("due_date") or None
-                    commitment.status = request.form.get("status", commitment.status)
+                    st = request.form.get("status")
+                    if st in ("open", "in_progress", "done", "waiting", "deferred", "ignore"):
+                        commitment.status = st
                     commitment.evidence = request.form.get("evidence", commitment.evidence)
                     ledger.update_commitment(commitment)
                     flash("Commitment updated.", "success")
@@ -243,7 +251,7 @@ def create_app(config: Config | None = None) -> Flask:
                 flash("Commitment not found.", "error")
                 return redirect(url_for("dashboard"))
             new_status = request.form.get("status")
-            if new_status not in ("open", "done", "waiting", "deferred", "ignore"):
+            if new_status not in ("open", "in_progress", "done", "waiting", "deferred", "ignore"):
                 flash("Invalid status.", "error")
                 return redirect(url_for("commitment_detail", commitment_id=commitment_id))
             commitment.status = new_status
@@ -270,7 +278,7 @@ def create_app(config: Config | None = None) -> Flask:
                 return {"success": False, "error": "Commitment not found"}, 404
             data = request.get_json(silent=True) or request.form
             new_status = data.get("status")
-            if new_status not in ("open", "done", "waiting", "deferred", "ignore"):
+            if new_status not in ("open", "in_progress", "done", "waiting", "deferred", "ignore"):
                 return {"success": False, "error": "Invalid status"}, 400
             commitment.status = new_status
             ledger.update_commitment(commitment)
@@ -287,6 +295,67 @@ def create_app(config: Config | None = None) -> Flask:
                 "id": commitment_id,
                 "status": new_status,
                 "suggested_rule": suggested_rule,
+            }
+        finally:
+            ledger.close()
+
+    @app.route("/api/commitments/<commitment_id>/owner", methods=["POST"])
+    def api_commitment_owner(commitment_id):
+        """Asynchronous quick owner assignment from dashboard or detail."""
+        ledger = open_ledger(config)
+        try:
+            commitment = ledger.get_commitment(commitment_id)
+            if not commitment:
+                return {"success": False, "error": "Commitment not found"}, 404
+            data = request.get_json(silent=True) or request.form
+            new_owner = (data.get("owner") or "").strip() or None
+            commitment.owner = new_owner
+            ledger.update_commitment(commitment)
+            return {
+                "success": True,
+                "id": commitment_id,
+                "owner": commitment.owner,
+            }
+        finally:
+            ledger.close()
+
+    @app.route("/api/commitments/<commitment_id>/update", methods=["POST"])
+    def api_commitment_update(commitment_id):
+        """Fast asynchronous update endpoint for edit view."""
+        ledger = open_ledger(config)
+        try:
+            commitment = ledger.get_commitment(commitment_id)
+            if not commitment:
+                return {"success": False, "error": "Commitment not found"}, 404
+            data = request.get_json(silent=True) or request.form
+            
+            if "description" in data and data.get("description"):
+                commitment.description = data["description"].strip()
+                
+            owner_select = data.get("owner_select")
+            if owner_select == "__custom__":
+                commitment.owner = (data.get("owner_custom") or "").strip() or None
+            elif owner_select is not None:
+                commitment.owner = owner_select.strip() or None
+            elif "owner" in data:
+                commitment.owner = (data.get("owner") or "").strip() or None
+                
+            if "due_date" in data:
+                commitment.due_date = (data.get("due_date") or "").strip() or None
+                
+            if "status" in data:
+                st = data.get("status")
+                if st in ("open", "in_progress", "done", "waiting", "deferred", "ignore"):
+                    commitment.status = st
+                    
+            if "evidence" in data:
+                commitment.evidence = data.get("evidence") or ""
+                
+            ledger.update_commitment(commitment)
+            return {
+                "success": True,
+                "id": commitment_id,
+                "commitment": commitment.to_dict(),
             }
         finally:
             ledger.close()

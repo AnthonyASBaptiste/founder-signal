@@ -32,22 +32,22 @@
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.75rem;">
           <div>
-            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Co-Founder</label>
-            <input type="text" name="cofounder_name" value="Tishana Simon" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
-            <input type="email" name="cofounder_email" value="tishana@research-navigator.ai" placeholder="Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <label for="setting-cofounder-name" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Co-Founder</label>
+            <input type="text" id="setting-cofounder-name" name="cofounder_name" value="Tishana Simon" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+            <input type="email" id="setting-cofounder-email" name="cofounder_email" value="tishana@research-navigator.ai" placeholder="Email" aria-label="Co-Founder Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
           </div>
           <div>
-            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Mentor</label>
-            <input type="text" name="mentor_name" value="Keneisha Browne" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
-            <input type="email" name="mentor_email" value="keneisha_browne@hotmail.com" placeholder="Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <label for="setting-mentor-name" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Mentor</label>
+            <input type="text" id="setting-mentor-name" name="mentor_name" value="Keneisha Browne" placeholder="Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin-bottom: 0.4rem;">
+            <input type="email" id="setting-mentor-email" name="mentor_email" value="keneisha_browne@hotmail.com" placeholder="Email" aria-label="Mentor Email" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
           </div>
         </div>
 
         <div>
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Accelerator / Key Partner Domain</label>
+          <label for="setting-partner-name" style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Accelerator / Key Partner Domain</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <input type="text" name="partner_name" value="Point Lisas Nitrogen (PLNL)" placeholder="Organization Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
-            <input type="text" name="partner_domain" value="plnl.co.tt" placeholder="domain (without @)" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <input type="text" id="setting-partner-name" name="partner_name" value="Point Lisas Nitrogen (PLNL)" placeholder="Organization Name" style="width: 100%; font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <input type="text" id="setting-partner-domain" name="partner_domain" value="plnl.co.tt" placeholder="domain (without @)" aria-label="Partner Domain" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.5rem 0.65rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
           </div>
         </div>
       </div>
@@ -55,25 +55,25 @@
       <!-- Specific Text Lists -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
-            All VIP Email Addresses <span style="font-weight: normal; color: var(--color-text-muted);">(one per line)</span>
+          <label for="setting-vip-emails" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            All VIP Email Addresses <span class="label-hint">(one per line)</span>
           </label>
-          <textarea name="vip_emails" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_emails', [])|join('\n') }}</textarea>
+          <textarea id="setting-vip-emails" name="vip_emails" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_emails', [])|join('\n') }}</textarea>
         </div>
 
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
-            VIP Domains <span style="font-weight: normal; color: var(--color-text-muted);">(one per line, without @)</span>
+          <label for="setting-vip-domains" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            VIP Domains <span class="label-hint">(one per line, without @)</span>
           </label>
-          <textarea name="vip_domains" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_domains', [])|join('\n') }}</textarea>
+          <textarea id="setting-vip-domains" name="vip_domains" rows="5" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_domains', [])|join('\n') }}</textarea>
         </div>
       </div>
 
       <div style="margin-bottom: 1.5rem;">
-        <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
-          VIP Projects &amp; Keywords <span style="font-weight: normal; color: var(--color-text-muted);">(one per line)</span>
+        <label for="setting-vip-keywords" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          VIP Projects &amp; Keywords <span class="label-hint">(one per line)</span>
         </label>
-        <textarea name="vip_keywords" rows="3" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_keywords', [])|join('\n') }}</textarea>
+        <textarea id="setting-vip-keywords" name="vip_keywords" rows="3" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.65rem 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); resize: vertical; line-height: 1.4;">{{ settings.get('vip_keywords', [])|join('\n') }}</textarea>
         <span style="font-size: 0.775rem; color: var(--color-text-muted);">Emails matching these in subject or sender name will be captured (e.g. Future Caribbean, Omni Caribbean)</span>
       </div>
 
@@ -122,44 +122,44 @@
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          <label for="setting-digest-time" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
             Morning Digest Delivery Time
           </label>
-          <input type="time" name="digest_time" value="{{ settings.get('digest_time', '08:00') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <input type="time" id="setting-digest-time" name="digest_time" value="{{ settings.get('digest_time', '08:00') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
           <span style="font-size: 0.75rem; color: var(--color-text-muted);">Pushes briefing to Discord at this hour</span>
         </div>
 
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
-            "Due Soon" Alert Horizon <span style="font-weight: normal; color: var(--color-text-muted);">(days)</span>
+          <label for="setting-due-soon-days" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            "Due Soon" Alert Horizon <span class="label-hint">(days)</span>
           </label>
-          <input type="number" name="due_soon_days" min="1" max="14" value="{{ settings.get('due_soon_days', 3) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <input type="number" id="setting-due-soon-days" name="due_soon_days" min="1" max="14" value="{{ settings.get('due_soon_days', 3) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
           <span style="font-size: 0.75rem; color: var(--color-text-muted);">Items due within X days appear in Do Now</span>
         </div>
 
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
-            Mail Heartbeat Frequency <span style="font-weight: normal; color: var(--color-text-muted);">(mins)</span>
+          <label for="setting-check-interval-mins" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+            Mail Heartbeat Frequency <span class="label-hint">(mins)</span>
           </label>
-          <input type="number" name="check_interval_mins" min="5" max="180" value="{{ settings.get('check_interval_mins', 15) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <input type="number" id="setting-check-interval-mins" name="check_interval_mins" min="5" max="180" value="{{ settings.get('check_interval_mins', 15) }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
           <span style="font-size: 0.75rem; color: var(--color-text-muted);">Checks for new VIP correspondence</span>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.25rem;">
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          <label for="setting-discord-alerts-target" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
             Discord Alert Target
           </label>
-          <input type="text" name="discord_alerts_target" value="{{ settings.get('discord_alerts_target', 'discord:alerts-and-logs') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <input type="text" id="setting-discord-alerts-target" name="discord_alerts_target" value="{{ settings.get('discord_alerts_target', 'discord:alerts-and-logs') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
           <span style="font-size: 0.75rem; color: var(--color-text-muted);">Format: <code>discord:alerts-and-logs</code></span>
         </div>
 
         <div>
-          <label style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
+          <label for="setting-app-url" style="display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.4rem; color: var(--color-text);">
             Cockpit App URL
           </label>
-          <input type="text" name="app_url" value="{{ settings.get('app_url', 'https://founder-signal.builtbyanthony.tech') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+          <input type="text" id="setting-app-url" name="app_url" value="{{ settings.get('app_url', 'https://founder-signal.builtbyanthony.tech') }}" style="width: 100%; font-family: var(--font-mono); font-size: 0.85rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);">
           <span style="font-size: 0.75rem; color: var(--color-text-muted);">Direct link embedded in Discord digest</span>
         </div>
       </div>

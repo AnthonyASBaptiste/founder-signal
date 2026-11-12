@@ -20,6 +20,10 @@ class Briefing:
     summary: str = ""
 
 
+def _today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
 def _is_overdue_or_due_today(commitment: Commitment) -> bool:
     if not commitment.due_date:
         return False
@@ -27,7 +31,7 @@ def _is_overdue_or_due_today(commitment: Commitment) -> bool:
         due = date.fromisoformat(commitment.due_date)
     except ValueError:
         return False
-    return due <= date.today()
+    return due <= _today()
 
 
 def _is_coming_up(commitment: Commitment, within_days: int = 7) -> bool:
@@ -37,7 +41,7 @@ def _is_coming_up(commitment: Commitment, within_days: int = 7) -> bool:
         due = date.fromisoformat(commitment.due_date)
     except ValueError:
         return False
-    today = date.today()
+    today = _today()
     return today < due <= today + timedelta(days=within_days)
 
 
@@ -64,10 +68,10 @@ def generate_briefing(
 
     fname = (founder_name or (getattr(config, "founder_name", None) or "")).strip().lower()
 
-    all_open = ledger.list_commitments(status="open")
+    all_active = [c for c in ledger.list_commitments() if c.status in ("open", "in_progress")]
     briefing = Briefing()
 
-    for c in all_open:
+    for c in all_active:
         if _is_overdue_or_due_today(c):
             briefing.do_now.append(c)
         elif _is_coming_up(c, coming_up_days):

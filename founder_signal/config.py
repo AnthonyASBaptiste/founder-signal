@@ -42,6 +42,11 @@ class Config:
     use_llm: bool = False
     founder_name: str = "Anthony"
     founder_email: str | None = None
+    founder_emails: tuple[str, ...] = (
+        "anthony.baptiste@outlook.com",
+        "anthony@research-navigator.ai",
+        "anthony.as.baptiste@gmail.com",
+    )
     inbox_folder: str = "~/Downloads/founder-signal-inbox"
     max_upload_mb: int = 25
     upload_extensions: str = "txt,md,mp3,wav,m4a,ogg,aac"
@@ -52,6 +57,15 @@ class Config:
     fs_admin_user: str | None = None
     fs_admin_password: str | None = None
     session_cookie_secure: bool = False
+
+    def is_founder_email(self, email: str | None) -> bool:
+        """Check if an email address matches any of the founder's known emails."""
+        if not email:
+            return False
+        clean = email.strip().lower()
+        if self.founder_email and self.founder_email.strip().lower() == clean:
+            return True
+        return clean in [e.lower() for e in self.founder_emails]
 
     def founder_for_account(self, account: str | None) -> tuple[str, str | None]:
         """Return (founder_name, founder_email) for a given himalaya account.
@@ -91,6 +105,13 @@ class Config:
             in ("true", "1", "yes"),
             founder_name=_getenv("FOUNDER_NAME", "Anthony") or "Anthony",
             founder_email=_getenv("FOUNDER_EMAIL"),
+            founder_emails=tuple(
+                e.strip() for e in _getenv("FOUNDER_EMAILS", "").split(",") if e.strip()
+            ) or (
+                "anthony.baptiste@outlook.com",
+                "anthony@research-navigator.ai",
+                "anthony.as.baptiste@gmail.com",
+            ),
             inbox_folder=_getenv("FOUNDER_SIGNAL_INBOX", "~/Downloads/founder-signal-inbox")
             or "~/Downloads/founder-signal-inbox",
             max_upload_mb=int(_getenv("FOUNDER_SIGNAL_MAX_UPLOAD_MB", "25") or 25),
